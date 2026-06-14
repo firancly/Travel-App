@@ -1,0 +1,85 @@
+import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import type { BudgetRange, Interest, Preferences } from '@/types';
+import { addDaysToISO } from '@/utils/date';
+
+interface PrefsState extends Preferences {
+  onboarded: boolean;
+  /** True once AsyncStorage has rehydrated this store. */
+  _hydrated: boolean;
+
+  setBudget: (b: BudgetRange) => void;
+  toggleInterest: (i: Interest) => void;
+  setDuration: (d: number) => void;
+  setDestination: (d: string) => void;
+  setStartDate: (iso: string) => void;
+  completeOnboarding: () => void;
+  /** Re-open onboarding while keeping the current answers. */
+  editPreferences: () => void;
+  reset: () => void;
+}
+
+const DEFAULTS: Preferences & { onboarded: boolean } = {
+  budget: null,
+  interests: [],
+  durationDays: 3,
+  destination: 'Lisbon, Portugal',
+  startDate: null,
+  endDate: null,
+  onboarded: false,
+};
+
+export const usePrefsStore = create<PrefsState>()(
+  persist(
+    (set) => ({
+      ...DEFAULTS,
+      _hydrated: false,
+
+      setBudget: (budget) => set({ budget }),
+
+      toggleInterest: (interest) =>
+        set((s) => ({
+          interests: s.interests.includes(interest)
+            ? s.interests.filter((i) => i !== interest)
+            : [...s.interests, interest],
+        })),
+
+      setDuration: (durationDays) => set({ durationDays }),
+
+      setDestination: (destination) => set({ destination }),
+
+      setStartDate: (startDate) =>
+        set((s) => ({
+          startDate,
+          endDate: addDaysToISO(startDate, Math.max(0, s.durationDays - 1)),
+        })),
+
+      completeOnboarding: () =>
+        set((s) => ({
+          onboarded: true,
+          endDate: s.startDate
+            ? addDaysToISO(s.startDate, Math.max(0, s.durationDays - 1))
+            : s.endDate,
+        })),
+
+      editPreferences: () => set({ onboarded: false }),
+
+      reset: () => set({ ...DEFAULTS }),
+    }),
+    {
+      name: 'ntm-preferences',
+      storage: createJSONStorage(() => AsyncStorage),
+      // Don't persist the transient hydration flag.
+      partialize: ({ _hydrated, ...rest }) => rest,
+    },
+  ),
+);
+
+// Flip the hydration flag once persisted state has loaded.
+usePrefsStore.persist.onFinishHydration(() => {
+  usePrefsStore.setState({ _hydrated: true });
+});
+if (usePrefsStore.persist.hasHydrated()) {
+  usePrefsStore.setState({ _hydrated: true });
+}

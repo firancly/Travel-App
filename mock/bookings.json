@@ -1,0 +1,83 @@
+[
+  {
+    "id": "b1",
+    "category": "restaurants",
+    "name": "Cervejaria Ramiro",
+    "detail": "Table for 2 - seafood",
+    "dateTime": "Tue, Jun 16 - 13:00",
+    "status": "Confirmed",
+    "partySize": 2
+  },
+  {
+    "id": "b2",
+    "category": "restaurants",
+    "name": "A Cevicheria",
+    "detail": "No reservations - walk-in queue",
+    "dateTime": "Wed, Jun 17 - 19:30",
+    "status": "Pending",
+    "partySize": 2
+  },
+  {
+    "id": "b3",
+    "category": "restaurants",
+    "name": "Time Out Market",
+    "detail": "Shared table - lunch",
+    "dateTime": "Mon, Jun 15 - 13:30",
+    "status": "Confirmed",
+    "partySize": 2
+  },
+  {
+    "id": "b4",
+    "category": "activities",
+    "name": "Sao Jorge Castle entry",
+    "detail": "Skip-the-line timed ticket",
+    "dateTime": "Tue, Jun 16 - 09:30",
+    "status": "Confirmed",
+    "partySize": 2
+  },
+  {
+    "id": "b5",
+    "category": "activities",
+    "name": "Oceanario de Lisboa",
+    "detail": "General admission",
+    "dateTime": "Wed, Jun 17 - 10:00",
+    "status": "Pending",
+    "partySize": 2
+  },
+  {
+    "id": "b6",
+    "category": "activities",
+    "name": "Alfama audio walking tour",
+    "detail": "Self-guided - starts at the Cathedral",
+    "dateTime": "Mon, Jun 15 - 16:30",
+    "status": "Confirmed",
+    "partySize": 2
+  },
+  {
+    "id": "b7",
+    "category": "transport",
+    "name": "Airport transfer",
+    "detail": "Private car - LIS to hotel",
+    "dateTime": "Sun, Jun 14 - 14:15",
+    "status": "Confirmed",
+    "partySize": 2
+  },
+  {
+    "id": "b8",
+    "category": "transport",
+    "name": "Tram 28 day pass",
+    "detail": "24h Carris travel card",
+    "dateTime": "Tue, Jun 16 - all day",
+    "status": "Pending",
+    "partySize": 2
+  },
+  {
+    "id": "b9",
+    "category": "transport",
+    "name": "Sintra train tickets",
+    "detail": "Return from Rossio station",
+    "dateTime": "Thu, Jun 18 - 09:10",
+    "status": "Pending",
+    "partySize": 2
+  }
+]

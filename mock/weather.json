@@ -1,0 +1,7 @@
+{
+  "condition": "rain",
+  "tempC": 18,
+  "summary": "Heavy showers expected this afternoon",
+  "warning": "Rain hits around the time you reach Belem Tower. Swap it for an indoor pick?",
+  "affectedItemId": "d1-3"
+}

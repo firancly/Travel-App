@@ -1,0 +1,75 @@
+[
+  {
+    "id": "a1",
+    "title": "Alfama: Whispers of the Old City",
+    "durationMin": 52,
+    "language": "English",
+    "price": 7,
+    "narrator": "Sofia Marques",
+    "description": "Wind through Lisbon's oldest quarter - tiled alleys, fado history and miradouro views, told stop by stop.",
+    "stops": [
+      { "name": "Lisbon Cathedral", "latitude": 38.7099, "longitude": -9.1334 },
+      { "name": "Largo das Portas do Sol", "latitude": 38.7118, "longitude": -9.1296 },
+      { "name": "Sao Jorge Castle", "latitude": 38.7139, "longitude": -9.1335 },
+      { "name": "Miradouro Senhora do Monte", "latitude": 38.7178, "longitude": -9.1316 }
+    ]
+  },
+  {
+    "id": "a2",
+    "title": "Belem & the Age of Discovery",
+    "durationMin": 65,
+    "language": "English",
+    "price": 9,
+    "narrator": "Tiago Lopes",
+    "description": "Follow the explorers from the monastery to the river - empire, caravels and custard tarts.",
+    "stops": [
+      { "name": "Jeronimos Monastery", "latitude": 38.6979, "longitude": -9.2065 },
+      { "name": "Monument to the Discoveries", "latitude": 38.6936, "longitude": -9.2057 },
+      { "name": "Belem Tower", "latitude": 38.6916, "longitude": -9.216 },
+      { "name": "Pasteis de Belem", "latitude": 38.6975, "longitude": -9.2028 }
+    ]
+  },
+  {
+    "id": "a3",
+    "title": "Baixa & Chiado Walking Tour",
+    "durationMin": 44,
+    "language": "English",
+    "price": 5,
+    "narrator": "Ana Ferreira",
+    "description": "The elegant downtown rebuilt after the 1755 quake - grand squares, cafes and bookshops.",
+    "stops": [
+      { "name": "Praca do Comercio", "latitude": 38.7077, "longitude": -9.1366 },
+      { "name": "Rua Augusta Arch", "latitude": 38.7093, "longitude": -9.1369 },
+      { "name": "Santa Justa Lift", "latitude": 38.7121, "longitude": -9.1396 },
+      { "name": "Cafe A Brasileira", "latitude": 38.7107, "longitude": -9.1426 }
+    ]
+  },
+  {
+    "id": "a4",
+    "title": "Fado & Flavours After Dark",
+    "durationMin": 38,
+    "language": "Portuguese",
+    "price": 6,
+    "narrator": "Miguel Sousa",
+    "description": "An evening soundwalk through taverns and tasca counters where fado was born.",
+    "stops": [
+      { "name": "Mercado da Ribeira", "latitude": 38.7067, "longitude": -9.1459 },
+      { "name": "Pink Street", "latitude": 38.7072, "longitude": -9.1444 },
+      { "name": "Bairro Alto", "latitude": 38.7129, "longitude": -9.1456 }
+    ]
+  },
+  {
+    "id": "a5",
+    "title": "Hidden Viewpoints of Lisbon",
+    "durationMin": 48,
+    "language": "English",
+    "price": 8,
+    "narrator": "Sofia Marques",
+    "description": "A miradouro-to-miradouro climb to the balconies locals keep to themselves.",
+    "stops": [
+      { "name": "Miradouro de Santa Catarina", "latitude": 38.7095, "longitude": -9.1475 },
+      { "name": "Miradouro de Sao Pedro de Alcantara", "latitude": 38.7152, "longitude": -9.1444 },
+      { "name": "Miradouro da Graca", "latitude": 38.7162, "longitude": -9.1305 }
+    ]
+  }
+]

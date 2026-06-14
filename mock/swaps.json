@@ -1,0 +1,86 @@
+[
+  {
+    "id": "s-food-1",
+    "title": "Manteigaria custard tarts",
+    "description": "Some say these beat the Belem original - judge for yourself.",
+    "durationMin": 30,
+    "category": "food"
+  },
+  {
+    "id": "s-food-2",
+    "title": "Ceviche at A Cevicheria",
+    "description": "Peruvian-Portuguese small plates under a giant octopus.",
+    "durationMin": 75,
+    "category": "food"
+  },
+  {
+    "id": "s-food-3",
+    "title": "Petiscos in Bairro Alto",
+    "description": "Hop between tiny tasca counters for Portuguese tapas.",
+    "durationMin": 90,
+    "category": "food"
+  },
+  {
+    "id": "s-culture-1",
+    "title": "MAAT riverside museum",
+    "description": "Wave-like art and architecture gallery on the waterfront.",
+    "durationMin": 75,
+    "category": "culture"
+  },
+  {
+    "id": "s-culture-2",
+    "title": "Fado night in Alfama",
+    "description": "Intimate live session of Portugal's soulful blues.",
+    "durationMin": 90,
+    "category": "culture"
+  },
+  {
+    "id": "s-culture-3",
+    "title": "Gulbenkian Museum",
+    "description": "World-class private collection set in serene gardens.",
+    "durationMin": 90,
+    "category": "culture"
+  },
+  {
+    "id": "s-nature-1",
+    "title": "Lisbon Botanical Garden",
+    "description": "Shaded subtropical glasshouse hidden above the city.",
+    "durationMin": 60,
+    "category": "nature"
+  },
+  {
+    "id": "s-nature-2",
+    "title": "Tagus river ferry to Cacilhas",
+    "description": "Cheap 10-minute crossing with skyline views both ways.",
+    "durationMin": 45,
+    "category": "nature"
+  },
+  {
+    "id": "s-nature-3",
+    "title": "Monsanto forest viewpoint",
+    "description": "Pine-scented walk to a panoramic deck above town.",
+    "durationMin": 60,
+    "category": "nature"
+  },
+  {
+    "id": "s-hidden-1",
+    "title": "Pink Street by day",
+    "description": "Photogenic former red-light lane, now bars and murals.",
+    "durationMin": 30,
+    "category": "hidden"
+  },
+  {
+    "id": "s-hidden-2",
+    "title": "Ler Devagar bookstore",
+    "description": "Cathedral of books with a flying-bicycle sculpture.",
+    "durationMin": 45,
+    "category": "hidden"
+  },
+  {
+    "id": "s-hidden-3",
+    "title": "Ride historic Tram 28",
+    "description": "Rattle through Graca and Alfama on a vintage yellow tram.",
+    "durationMin": 50,
+    "category": "hidden"
+  }
+]

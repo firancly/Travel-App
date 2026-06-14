@@ -1,0 +1,136 @@
+[
+  {
+    "day": 1,
+    "label": "Day 1 - Belem",
+    "items": [
+      {
+        "id": "d1-1",
+        "time": "09:00",
+        "title": "Custard tarts at Pasteis de Belem",
+        "description": "Ease into the day with the original 1837 pastel de nata.",
+        "durationMin": 30,
+        "category": "food",
+        "placeId": "p3"
+      },
+      {
+        "id": "d1-2",
+        "time": "10:00",
+        "title": "Jeronimos Monastery",
+        "description": "Wander the Manueline cloisters before the crowds arrive.",
+        "durationMin": 75,
+        "category": "culture",
+        "placeId": "p4"
+      },
+      {
+        "id": "d1-3",
+        "time": "12:00",
+        "title": "Belem Tower",
+        "description": "Riverfront fortress and photo stop on the Tagus.",
+        "durationMin": 45,
+        "category": "culture",
+        "placeId": "p5"
+      },
+      {
+        "id": "d1-4",
+        "time": "13:30",
+        "title": "Lunch at Time Out Market",
+        "description": "Graze across a dozen of the city's best kitchens.",
+        "durationMin": 90,
+        "category": "food",
+        "placeId": "p1"
+      },
+      {
+        "id": "d1-5",
+        "time": "16:00",
+        "title": "LX Factory stroll",
+        "description": "Indie shops, street art and coffee in a converted mill.",
+        "durationMin": 60,
+        "category": "hidden",
+        "placeId": "p8"
+      }
+    ]
+  },
+  {
+    "day": 2,
+    "label": "Day 2 - Alfama",
+    "items": [
+      {
+        "id": "d2-1",
+        "time": "09:30",
+        "title": "Sao Jorge Castle",
+        "description": "Moorish ramparts with the best panorama in town.",
+        "durationMin": 90,
+        "category": "culture",
+        "placeId": "p6"
+      },
+      {
+        "id": "d2-2",
+        "time": "11:30",
+        "title": "Feira da Ladra flea market",
+        "description": "Hunt for azulejo tiles and vinyl among the stalls.",
+        "durationMin": 60,
+        "category": "hidden",
+        "placeId": "p9"
+      },
+      {
+        "id": "d2-3",
+        "time": "13:00",
+        "title": "Lunch at Cervejaria Ramiro",
+        "description": "Garlic prawns, percebes and an ice-cold beer.",
+        "durationMin": 75,
+        "category": "food",
+        "placeId": "p2"
+      },
+      {
+        "id": "d2-4",
+        "time": "15:30",
+        "title": "Miradouro Senhora do Monte",
+        "description": "Climb to the highest viewpoint for a quiet breather.",
+        "durationMin": 30,
+        "category": "hidden",
+        "placeId": "p7"
+      },
+      {
+        "id": "d2-5",
+        "time": "18:00",
+        "title": "Sunset at Eduardo VII Park",
+        "description": "Axial lawns framing the river as the light drops.",
+        "durationMin": 45,
+        "category": "nature",
+        "placeId": "p11"
+      }
+    ]
+  },
+  {
+    "day": 3,
+    "label": "Day 3 - Riverside",
+    "items": [
+      {
+        "id": "d3-1",
+        "time": "10:00",
+        "title": "Oceanario de Lisboa",
+        "description": "Meet the ocean sunfish in one of the world's great aquariums.",
+        "durationMin": 120,
+        "category": "nature",
+        "placeId": "p10"
+      },
+      {
+        "id": "d3-2",
+        "time": "13:00",
+        "title": "Riverside seafood lunch",
+        "description": "Slow lunch with a view of the water at Parque das Nacoes.",
+        "durationMin": 75,
+        "category": "food"
+      },
+      {
+        "id": "d3-3",
+        "time": "15:30",
+        "title": "Jardim da Estrela",
+        "description": "Wind down among duck ponds and a 19th-century bandstand.",
+        "durationMin": 45,
+        "category": "nature",
+        "placeId": "p12"
+      }
+    ]
+  }
+]
