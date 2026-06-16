@@ -22,11 +22,11 @@ import { CATEGORY_META, CATEGORY_ORDER } from '@/utils/categories';
 import { formatDuration } from '@/utils/time';
 import type { Place, PlaceCategory } from '@/types';
 
-const LISBON_REGION: Region = {
-  latitude: 38.724,
-  longitude: -9.15,
-  latitudeDelta: 0.085,
-  longitudeDelta: 0.13,
+const KL_REGION: Region = {
+  latitude: 3.15,
+  longitude: 101.702,
+  latitudeDelta: 0.075,
+  longitudeDelta: 0.06,
 };
 
 export function DiscoverScreen() {
@@ -110,7 +110,7 @@ export function DiscoverScreen() {
             style={StyleSheet.absoluteFill}
             provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
             customMapStyle={mutedMapStyle}
-            initialRegion={LISBON_REGION}
+            initialRegion={KL_REGION}
             showsCompass={false}
             toolbarEnabled={false}
           >

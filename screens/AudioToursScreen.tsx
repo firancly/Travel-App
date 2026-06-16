@@ -17,7 +17,7 @@ export function AudioToursScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <BackHeader title="Audio Tours" subtitle={`${audioTours.length} self-guided tours in Lisbon`} />
+      <BackHeader title="Audio Tours" subtitle={`${audioTours.length} self-guided tours in Kuala Lumpur`} />
 
       <ScrollView
         showsVerticalScrollIndicator={false}

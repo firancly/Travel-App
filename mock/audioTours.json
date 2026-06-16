@@ -1,75 +1,75 @@
 [
   {
     "id": "a1",
-    "title": "Alfama: Whispers of the Old City",
-    "durationMin": 52,
+    "title": "Merdeka & the Old Quarter",
+    "durationMin": 48,
     "language": "English",
     "price": 7,
-    "narrator": "Sofia Marques",
-    "description": "Wind through Lisbon's oldest quarter - tiled alleys, fado history and miradouro views, told stop by stop.",
+    "narrator": "Aisyah Rahman",
+    "description": "Trace KL's colonial heart - independence square, Moorish landmarks and the river confluence the city is named after.",
     "stops": [
-      { "name": "Lisbon Cathedral", "latitude": 38.7099, "longitude": -9.1334 },
-      { "name": "Largo das Portas do Sol", "latitude": 38.7118, "longitude": -9.1296 },
-      { "name": "Sao Jorge Castle", "latitude": 38.7139, "longitude": -9.1335 },
-      { "name": "Miradouro Senhora do Monte", "latitude": 38.7178, "longitude": -9.1316 }
+      { "name": "Merdeka Square", "latitude": 3.1478, "longitude": 101.6936 },
+      { "name": "Sultan Abdul Samad Building", "latitude": 3.1488, "longitude": 101.6945 },
+      { "name": "Masjid Jamek", "latitude": 3.1493, "longitude": 101.6958 },
+      { "name": "Central Market", "latitude": 3.1457, "longitude": 101.6958 }
     ]
   },
   {
     "id": "a2",
-    "title": "Belem & the Age of Discovery",
-    "durationMin": 65,
+    "title": "KLCC & Modern Kuala Lumpur",
+    "durationMin": 62,
     "language": "English",
     "price": 9,
-    "narrator": "Tiago Lopes",
-    "description": "Follow the explorers from the monastery to the river - empire, caravels and custard tarts.",
+    "narrator": "Daniel Tan",
+    "description": "The story of how a tin-mining town grew the world's tallest twin towers - skyline, parks and ambition.",
     "stops": [
-      { "name": "Jeronimos Monastery", "latitude": 38.6979, "longitude": -9.2065 },
-      { "name": "Monument to the Discoveries", "latitude": 38.6936, "longitude": -9.2057 },
-      { "name": "Belem Tower", "latitude": 38.6916, "longitude": -9.216 },
-      { "name": "Pasteis de Belem", "latitude": 38.6975, "longitude": -9.2028 }
+      { "name": "Petronas Twin Towers", "latitude": 3.1578, "longitude": 101.7117 },
+      { "name": "Suria KLCC", "latitude": 3.1579, "longitude": 101.7116 },
+      { "name": "KLCC Park", "latitude": 3.1577, "longitude": 101.7137 },
+      { "name": "KL Tower", "latitude": 3.1528, "longitude": 101.7039 }
     ]
   },
   {
     "id": "a3",
-    "title": "Baixa & Chiado Walking Tour",
+    "title": "Chinatown Flavours",
     "durationMin": 44,
     "language": "English",
     "price": 5,
-    "narrator": "Ana Ferreira",
-    "description": "The elegant downtown rebuilt after the 1755 quake - grand squares, cafes and bookshops.",
+    "narrator": "Mei Ling Wong",
+    "description": "Eat your way through Petaling Street - temples, herbal teas and the hawker dishes that built the neighbourhood.",
     "stops": [
-      { "name": "Praca do Comercio", "latitude": 38.7077, "longitude": -9.1366 },
-      { "name": "Rua Augusta Arch", "latitude": 38.7093, "longitude": -9.1369 },
-      { "name": "Santa Justa Lift", "latitude": 38.7121, "longitude": -9.1396 },
-      { "name": "Cafe A Brasileira", "latitude": 38.7107, "longitude": -9.1426 }
+      { "name": "Petaling Street", "latitude": 3.1437, "longitude": 101.6986 },
+      { "name": "Sri Mahamariamman Temple", "latitude": 3.1428, "longitude": 101.6967 },
+      { "name": "Guan Di Temple", "latitude": 3.144, "longitude": 101.6975 },
+      { "name": "Madras Lane hawkers", "latitude": 3.1435, "longitude": 101.698 }
     ]
   },
   {
     "id": "a4",
-    "title": "Fado & Flavours After Dark",
+    "title": "Batu Caves Pilgrimage",
     "durationMin": 38,
-    "language": "Portuguese",
-    "price": 6,
-    "narrator": "Miguel Sousa",
-    "description": "An evening soundwalk through taverns and tasca counters where fado was born.",
+    "language": "English",
+    "price": 8,
+    "narrator": "Aisyah Rahman",
+    "description": "The myth and ritual behind the golden statue and the 272 rainbow steps to the temple caves.",
     "stops": [
-      { "name": "Mercado da Ribeira", "latitude": 38.7067, "longitude": -9.1459 },
-      { "name": "Pink Street", "latitude": 38.7072, "longitude": -9.1444 },
-      { "name": "Bairro Alto", "latitude": 38.7129, "longitude": -9.1456 }
+      { "name": "Batu Caves entrance", "latitude": 3.2371, "longitude": 101.6838 },
+      { "name": "Temple Cave", "latitude": 3.2384, "longitude": 101.6841 },
+      { "name": "Ramayana Cave", "latitude": 3.237, "longitude": 101.6835 }
     ]
   },
   {
     "id": "a5",
-    "title": "Hidden Viewpoints of Lisbon",
-    "durationMin": 48,
-    "language": "English",
-    "price": 8,
-    "narrator": "Sofia Marques",
-    "description": "A miradouro-to-miradouro climb to the balconies locals keep to themselves.",
+    "title": "Kampung Baru After Dark",
+    "durationMin": 40,
+    "language": "Malay",
+    "price": 6,
+    "narrator": "Hafiz Idris",
+    "description": "An evening soundwalk through the Malay village - timber houses, night-market aromas and tower views.",
     "stops": [
-      { "name": "Miradouro de Santa Catarina", "latitude": 38.7095, "longitude": -9.1475 },
-      { "name": "Miradouro de Sao Pedro de Alcantara", "latitude": 38.7152, "longitude": -9.1444 },
-      { "name": "Miradouro da Graca", "latitude": 38.7162, "longitude": -9.1305 }
+      { "name": "Kampung Baru market", "latitude": 3.1647, "longitude": 101.7036 },
+      { "name": "Sunday Market lane", "latitude": 3.1659, "longitude": 101.7041 },
+      { "name": "Masjid Kampung Baru", "latitude": 3.1638, "longitude": 101.7022 }
     ]
   }
 ]

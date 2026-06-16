@@ -207,7 +207,7 @@ export function OnboardingScreen() {
                 <TextInput
                   value={destination}
                   onChangeText={setDestination}
-                  placeholder="e.g. Lisbon, Portugal"
+                  placeholder="e.g. Kuala Lumpur, Malaysia"
                   placeholderTextColor={colors.textMuted}
                   style={styles.input}
                   returnKeyType="done"

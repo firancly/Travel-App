@@ -1,86 +1,86 @@
 [
   {
     "id": "s-food-1",
-    "title": "Manteigaria custard tarts",
-    "description": "Some say these beat the Belem original - judge for yourself.",
-    "durationMin": 30,
+    "title": "Nasi lemak at Village Park",
+    "description": "Locals swear this is the best nasi lemak in the Klang Valley.",
+    "durationMin": 60,
     "category": "food"
   },
   {
     "id": "s-food-2",
-    "title": "Ceviche at A Cevicheria",
-    "description": "Peruvian-Portuguese small plates under a giant octopus.",
+    "title": "Banana leaf rice in Brickfields",
+    "description": "South Indian feast served on a leaf in Little India.",
     "durationMin": 75,
     "category": "food"
   },
   {
     "id": "s-food-3",
-    "title": "Petiscos in Bairro Alto",
-    "description": "Hop between tiny tasca counters for Portuguese tapas.",
-    "durationMin": 90,
+    "title": "Supper at Imbi Market",
+    "description": "Old-school morning-to-late hawker stalls and kopi.",
+    "durationMin": 75,
     "category": "food"
   },
   {
     "id": "s-culture-1",
-    "title": "MAAT riverside museum",
-    "description": "Wave-like art and architecture gallery on the waterfront.",
-    "durationMin": 75,
+    "title": "Islamic Arts Museum",
+    "description": "Stunning collection of manuscripts, textiles and domes.",
+    "durationMin": 90,
     "category": "culture"
   },
   {
     "id": "s-culture-2",
-    "title": "Fado night in Alfama",
-    "description": "Intimate live session of Portugal's soulful blues.",
-    "durationMin": 90,
+    "title": "National Mosque (Masjid Negara)",
+    "description": "Modernist mosque with a 16-point star concrete roof.",
+    "durationMin": 60,
     "category": "culture"
   },
   {
     "id": "s-culture-3",
-    "title": "Gulbenkian Museum",
-    "description": "World-class private collection set in serene gardens.",
-    "durationMin": 90,
+    "title": "Thean Hou Temple",
+    "description": "Ornate six-tiered Chinese temple on a hilltop.",
+    "durationMin": 60,
     "category": "culture"
   },
   {
     "id": "s-nature-1",
-    "title": "Lisbon Botanical Garden",
-    "description": "Shaded subtropical glasshouse hidden above the city.",
-    "durationMin": 60,
+    "title": "KL Bird Park",
+    "description": "Walk-through free-flight aviary in the Lake Gardens.",
+    "durationMin": 90,
     "category": "nature"
   },
   {
     "id": "s-nature-2",
-    "title": "Tagus river ferry to Cacilhas",
-    "description": "Cheap 10-minute crossing with skyline views both ways.",
-    "durationMin": 45,
+    "title": "Titiwangsa Lake Gardens",
+    "description": "Lakeside park with the classic skyline postcard view.",
+    "durationMin": 60,
     "category": "nature"
   },
   {
     "id": "s-nature-3",
-    "title": "Monsanto forest viewpoint",
-    "description": "Pine-scented walk to a panoramic deck above town.",
+    "title": "Bukit Nanas Forest walk",
+    "description": "Pocket of rainforest right in the middle of the city.",
     "durationMin": 60,
     "category": "nature"
   },
   {
     "id": "s-hidden-1",
-    "title": "Pink Street by day",
-    "description": "Photogenic former red-light lane, now bars and murals.",
-    "durationMin": 30,
-    "category": "hidden"
-  },
-  {
-    "id": "s-hidden-2",
-    "title": "Ler Devagar bookstore",
-    "description": "Cathedral of books with a flying-bicycle sculpture.",
+    "title": "Street art at Kwai Chai Hong",
+    "description": "Restored Chinatown laneway of murals and cafes.",
     "durationMin": 45,
     "category": "hidden"
   },
   {
+    "id": "s-hidden-2",
+    "title": "REXKL creative hub",
+    "description": "A burnt-out cinema reborn as a bookshop and food space.",
+    "durationMin": 60,
+    "category": "hidden"
+  },
+  {
     "id": "s-hidden-3",
-    "title": "Ride historic Tram 28",
-    "description": "Rattle through Graca and Alfama on a vintage yellow tram.",
-    "durationMin": 50,
+    "title": "Chow Kit wet market",
+    "description": "KL's largest wet market - a sensory local morning.",
+    "durationMin": 60,
     "category": "hidden"
   }
 ]

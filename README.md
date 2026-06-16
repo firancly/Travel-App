@@ -4,7 +4,7 @@ A mobile-first travel companion MVP built with **React Native + Expo + TypeScrip
 Plan a trip, discover places on a map, build a day-by-day itinerary with smart swaps,
 listen to self-guided audio tours, and manage bookings — all on local mock data.
 
-> Demo content is themed around **Lisbon, Portugal**.
+> Demo content is themed around **Kuala Lumpur, Malaysia**.
 
 ---
 
@@ -87,9 +87,11 @@ icon spring-scaling to 1.1×.
   `react-native-linear-gradient` and does **not** run in Expo Go. To keep the app runnable
   with `npx expo start`, skeletons are implemented with an equivalent shimmer built on
   `expo-linear-gradient` + Reanimated (`components/Skeleton.tsx`). Same effect, Expo-Go safe.
-- **Maps in production:** Google Maps works in Expo Go on Android out of the box. For a
-  standalone/dev build you'll need to add a Google Maps API key (via the `react-native-maps`
-  config plugin) — not required for the Expo Go demo.
+- **Maps:** On SDK 55+, Expo Go can no longer authenticate Google Maps on Android (blank map).
+  Google Maps now requires your own API key in `app.json` (`react-native-maps` config plugin,
+  `androidGoogleMapsApiKey`) **and a development build** (`npx expo run:android` or an EAS dev
+  build) — Expo Go won't pick up the plugin. iOS uses Apple Maps and works without a key.
+  A free, no-billing alternative is MapLibre + OpenStreetMap tiles.
 - **No WhatsApp integration**, as requested.
 - All data is mock JSON in `/mock`; "Add to Plan", "Smart Swap", reorder, and new bookings
   mutate in-memory state (the itinerary is also persisted).

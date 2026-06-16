@@ -100,8 +100,8 @@ export function AudioPlayerScreen() {
             provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
             customMapStyle={mutedMapStyle}
             initialRegion={{
-              latitude: coords[0]?.latitude ?? 38.71,
-              longitude: coords[0]?.longitude ?? -9.14,
+              latitude: coords[0]?.latitude ?? 3.147,
+              longitude: coords[0]?.longitude ?? 101.7,
               latitudeDelta: 0.03,
               longitudeDelta: 0.03,
             }}

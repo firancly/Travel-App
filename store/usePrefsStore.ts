@@ -24,7 +24,7 @@ const DEFAULTS: Preferences & { onboarded: boolean } = {
   budget: null,
   interests: [],
   durationDays: 3,
-  destination: 'Lisbon, Portugal',
+  destination: 'Kuala Lumpur, Malaysia',
   startDate: null,
   endDate: null,
   onboarded: false,

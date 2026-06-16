@@ -1,135 +1,135 @@
 [
   {
     "day": 1,
-    "label": "Day 1 - Belem",
+    "label": "Day 1 - City Centre",
     "items": [
       {
         "id": "d1-1",
         "time": "09:00",
-        "title": "Custard tarts at Pasteis de Belem",
-        "description": "Ease into the day with the original 1837 pastel de nata.",
-        "durationMin": 30,
-        "category": "food",
-        "placeId": "p3"
-      },
-      {
-        "id": "d1-2",
-        "time": "10:00",
-        "title": "Jeronimos Monastery",
-        "description": "Wander the Manueline cloisters before the crowds arrive.",
+        "title": "Petronas Twin Towers",
+        "description": "Beat the queue to the Skybridge and 86th-floor deck.",
         "durationMin": 75,
         "category": "culture",
-        "placeId": "p4"
-      },
-      {
-        "id": "d1-3",
-        "time": "12:00",
-        "title": "Belem Tower",
-        "description": "Riverfront fortress and photo stop on the Tagus.",
-        "durationMin": 45,
-        "category": "culture",
-        "placeId": "p5"
-      },
-      {
-        "id": "d1-4",
-        "time": "13:30",
-        "title": "Lunch at Time Out Market",
-        "description": "Graze across a dozen of the city's best kitchens.",
-        "durationMin": 90,
-        "category": "food",
         "placeId": "p1"
       },
       {
-        "id": "d1-5",
-        "time": "16:00",
-        "title": "LX Factory stroll",
-        "description": "Indie shops, street art and coffee in a converted mill.",
+        "id": "d1-2",
+        "time": "11:00",
+        "title": "Stroll through KLCC Park",
+        "description": "Green breather and tower photos at the foot of the towers.",
+        "durationMin": 45,
+        "category": "nature",
+        "placeId": "p11"
+      },
+      {
+        "id": "d1-3",
+        "time": "13:00",
+        "title": "Lunch at Lot 10 Hutong",
+        "description": "Heritage hawker stalls in an air-conditioned basement.",
+        "durationMin": 75,
+        "category": "food",
+        "placeId": "p6"
+      },
+      {
+        "id": "d1-4",
+        "time": "15:30",
+        "title": "KL Tower Sky Box",
+        "description": "Step onto the glass box jutting out over the skyline.",
         "durationMin": 60,
-        "category": "hidden",
-        "placeId": "p8"
+        "category": "culture",
+        "placeId": "p3"
+      },
+      {
+        "id": "d1-5",
+        "time": "19:00",
+        "title": "Dinner at Jalan Alor",
+        "description": "Open-air hawker street - satay, BBQ seafood and more.",
+        "durationMin": 90,
+        "category": "food",
+        "placeId": "p5"
       }
     ]
   },
   {
     "day": 2,
-    "label": "Day 2 - Alfama",
+    "label": "Day 2 - Heritage Core",
     "items": [
       {
         "id": "d2-1",
         "time": "09:30",
-        "title": "Sao Jorge Castle",
-        "description": "Moorish ramparts with the best panorama in town.",
-        "durationMin": 90,
+        "title": "Merdeka Square",
+        "description": "Independence square and the Sultan Abdul Samad Building.",
+        "durationMin": 45,
         "category": "culture",
-        "placeId": "p6"
+        "placeId": "p4"
       },
       {
         "id": "d2-2",
-        "time": "11:30",
-        "title": "Feira da Ladra flea market",
-        "description": "Hunt for azulejo tiles and vinyl among the stalls.",
+        "time": "10:30",
+        "title": "Central Market crafts",
+        "description": "Batik, pewter and souvenirs in a 1888 art-deco hall.",
         "durationMin": 60,
         "category": "hidden",
         "placeId": "p9"
       },
       {
         "id": "d2-3",
-        "time": "13:00",
-        "title": "Lunch at Cervejaria Ramiro",
-        "description": "Garlic prawns, percebes and an ice-cold beer.",
-        "durationMin": 75,
-        "category": "food",
-        "placeId": "p2"
+        "time": "12:00",
+        "title": "Petaling Street wander",
+        "description": "Haggle through the lantern-lit lanes of Chinatown.",
+        "durationMin": 60,
+        "category": "hidden",
+        "placeId": "p8"
       },
       {
         "id": "d2-4",
-        "time": "15:30",
-        "title": "Miradouro Senhora do Monte",
-        "description": "Climb to the highest viewpoint for a quiet breather.",
-        "durationMin": 30,
-        "category": "hidden",
+        "time": "13:30",
+        "title": "Nyonya lunch at Old China Cafe",
+        "description": "Peranakan classics in a restored guild house.",
+        "durationMin": 75,
+        "category": "food",
         "placeId": "p7"
       },
       {
         "id": "d2-5",
-        "time": "18:00",
-        "title": "Sunset at Eduardo VII Park",
-        "description": "Axial lawns framing the river as the light drops.",
-        "durationMin": 45,
+        "time": "16:30",
+        "title": "Perdana Botanical Garden",
+        "description": "Orchid and hibiscus gardens by the Lake Gardens.",
+        "durationMin": 60,
         "category": "nature",
-        "placeId": "p11"
+        "placeId": "p12"
       }
     ]
   },
   {
     "day": 3,
-    "label": "Day 3 - Riverside",
+    "label": "Day 3 - Beyond the City",
     "items": [
       {
         "id": "d3-1",
-        "time": "10:00",
-        "title": "Oceanario de Lisboa",
-        "description": "Meet the ocean sunfish in one of the world's great aquariums.",
+        "time": "08:30",
+        "title": "Batu Caves",
+        "description": "Climb the rainbow stairs to the limestone temple caves.",
         "durationMin": 120,
-        "category": "nature",
-        "placeId": "p10"
+        "category": "culture",
+        "placeId": "p2"
       },
       {
         "id": "d3-2",
-        "time": "13:00",
-        "title": "Riverside seafood lunch",
-        "description": "Slow lunch with a view of the water at Parque das Nacoes.",
+        "time": "12:30",
+        "title": "Riverside brunch",
+        "description": "Relaxed bite back in town near the Klang river.",
         "durationMin": 75,
         "category": "food"
       },
       {
         "id": "d3-3",
-        "time": "15:30",
-        "title": "Jardim da Estrela",
-        "description": "Wind down among duck ponds and a 19th-century bandstand.",
-        "durationMin": 45,
-        "category": "nature",
-        "placeId": "p12"
+        "time": "15:00",
+        "title": "Kampung Baru walk",
+        "description": "Timber Malay houses framed by the modern skyline.",
+        "durationMin": 60,
+        "category": "hidden",
+        "placeId": "p10"
       }
     ]
   }

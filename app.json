@@ -9,11 +9,13 @@
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "com.navigatethemoment.app",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Navigate the Moment uses your location to show nearby recommendations on the map."
       }
     },
     "android": {
+      "package": "com.navigatethemoment.app",
       "adaptiveIcon": {
         "backgroundColor": "#E8F5EC",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -29,6 +31,12 @@
     "plugins": [
       "@react-native-community/datetimepicker",
       "expo-font",
+      [
+        "react-native-maps",
+        {
+          "androidGoogleMapsApiKey": "AIzaSyBaGxXqfnnJ2JsxKZMyECvO4k4U-z3DHbI"
+        }
+      ],
       [
         "expo-splash-screen",
         {

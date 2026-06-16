@@ -1,7 +1,7 @@
 {
   "condition": "rain",
-  "tempC": 18,
-  "summary": "Heavy showers expected this afternoon",
-  "warning": "Rain hits around the time you reach Belem Tower. Swap it for an indoor pick?",
-  "affectedItemId": "d1-3"
+  "tempC": 31,
+  "summary": "Afternoon thunderstorms likely",
+  "warning": "Heavy showers roll in around your KL Tower slot. Swap it for an indoor pick?",
+  "affectedItemId": "d1-4"
 }
