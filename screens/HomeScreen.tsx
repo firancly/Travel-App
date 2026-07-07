@@ -1,6 +1,6 @@
-import React, { useMemo, useState } from 'react';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import React, { useMemo, useState } from "react";
+import { View, StyleSheet, TouchableOpacity } from "react-native";
+import { useRouter } from "expo-router";
 import {
   CloudRain,
   Compass,
@@ -11,29 +11,37 @@ import {
   Clock,
   X,
   Settings,
-} from 'lucide-react-native';
-import type { LucideIcon } from 'lucide-react-native';
-import { Screen, AppText, Card, FeatureIcon, SectionHeader, Button, SkeletonCard, EmptyState } from '@/components';
-import { colors, spacing, radius, fonts } from '@/theme';
-import { usePrefsStore } from '@/store/usePrefsStore';
-import { usePlanStore } from '@/store/usePlanStore';
-import { weather } from '@/mock';
-import { CATEGORY_META } from '@/utils/categories';
-import { getTripInfo, cityName } from '@/utils/trip';
-import { to12h, formatDuration } from '@/utils/time';
-import { useFakeLoading } from '@/hooks/useFakeLoading';
-import type { AppNavProp } from '@/navigation/types';
-import type { ItineraryItem } from '@/types';
+} from "lucide-react-native";
+import type { LucideIcon } from "lucide-react-native";
+import {
+  Screen,
+  AppText,
+  Card,
+  FeatureIcon,
+  SectionHeader,
+  Button,
+  SkeletonCard,
+  EmptyState,
+} from "@/components";
+import { colors, spacing, radius, fonts } from "@/theme";
+import { usePrefsStore } from "@/store/usePrefsStore";
+import { usePlanStore } from "@/store/usePlanStore";
+import { weather } from "@/mock";
+import { CATEGORY_META } from "@/utils/categories";
+import { getTripInfo, cityName } from "@/utils/trip";
+import { to12h, formatDuration } from "@/utils/time";
+import { useFakeLoading } from "@/hooks/useFakeLoading";
+import type { ItineraryItem } from "@/types";
 
 function greeting(): string {
   const h = new Date().getHours();
-  if (h < 12) return 'Good morning';
-  if (h < 18) return 'Good afternoon';
-  return 'Good evening';
+  if (h < 12) return "Good morning";
+  if (h < 18) return "Good afternoon";
+  return "Good evening";
 }
 
 export function HomeScreen() {
-  const navigation = useNavigation<AppNavProp>();
+  const router = useRouter();
   const loading = useFakeLoading();
 
   const prefs = usePrefsStore();
@@ -56,13 +64,16 @@ export function HomeScreen() {
     [days],
   );
   const showWeather =
-    !weatherDismissed && weather.condition === 'rain' && !!weather.warning && !!affectedDay;
+    !weatherDismissed &&
+    weather.condition === "rain" &&
+    !!weather.warning &&
+    !!affectedDay;
 
   const onWeatherSwap = () => {
     if (affectedDay && weather.affectedItemId) {
       smartSwap(affectedDay.day, weather.affectedItemId);
       setWeatherDismissed(true);
-      navigation.navigate('MyPlan');
+      router.push("/plan");
     }
   };
 
@@ -82,7 +93,7 @@ export function HomeScreen() {
         <TouchableOpacity
           activeOpacity={0.8}
           style={styles.avatarBtn}
-          onPress={() => navigation.navigate('Profile')}
+          onPress={() => router.push("/profile")}
         >
           <Settings size={20} color={colors.primary} strokeWidth={2.2} />
         </TouchableOpacity>
@@ -101,12 +112,23 @@ export function HomeScreen() {
             <AppText variant="body" style={styles.weatherText}>
               {weather.warning}
             </AppText>
-            <TouchableOpacity activeOpacity={0.8} style={styles.weatherCta} onPress={onWeatherSwap}>
+            <TouchableOpacity
+              activeOpacity={0.8}
+              style={styles.weatherCta}
+              onPress={onWeatherSwap}
+            >
               <AppText style={styles.weatherCtaText}>Smart swap it</AppText>
-              <ChevronRight size={16} color={colors.primary} strokeWidth={2.4} />
+              <ChevronRight
+                size={16}
+                color={colors.primary}
+                strokeWidth={2.4}
+              />
             </TouchableOpacity>
           </View>
-          <TouchableOpacity onPress={() => setWeatherDismissed(true)} style={styles.weatherClose}>
+          <TouchableOpacity
+            onPress={() => setWeatherDismissed(true)}
+            style={styles.weatherClose}
+          >
             <X size={18} color={colors.textMuted} />
           </TouchableOpacity>
         </View>
@@ -117,7 +139,7 @@ export function HomeScreen() {
         <SectionHeader
           title="Today's plan"
           actionLabel="View all"
-          onActionPress={() => navigation.navigate('MyPlan')}
+          onActionPress={() => router.push("/plan")}
         />
         {loading ? (
           <View style={{ gap: spacing.md }}>
@@ -130,7 +152,7 @@ export function HomeScreen() {
             title="Nothing planned yet"
             message="Add places from Discover to build your day."
             ctaLabel="Discover places"
-            onCtaPress={() => navigation.navigate('Discover')}
+            onCtaPress={() => router.push("/discover")}
           />
         ) : (
           <View style={{ gap: spacing.md }}>
@@ -138,7 +160,7 @@ export function HomeScreen() {
               <TodayCard
                 key={item.id}
                 item={item}
-                onPress={() => navigation.navigate('MyPlan')}
+                onPress={() => router.push("/plan")}
               />
             ))}
           </View>
@@ -152,22 +174,22 @@ export function HomeScreen() {
           <ActionTile
             icon={Compass}
             label="Discover"
-            onPress={() => navigation.navigate('Discover')}
+            onPress={() => router.push("/discover")}
           />
           <ActionTile
             icon={CalendarRange}
             label="My Plan"
-            onPress={() => navigation.navigate('MyPlan')}
+            onPress={() => router.push("/plan")}
           />
           <ActionTile
             icon={Headphones}
             label="Audio Tours"
-            onPress={() => navigation.navigate('AudioTours')}
+            onPress={() => router.push("/audio-tours")}
           />
           <ActionTile
             icon={Ticket}
             label="Bookings"
-            onPress={() => navigation.navigate('Bookings')}
+            onPress={() => router.push("/bookings")}
           />
         </View>
       </View>
@@ -175,7 +197,13 @@ export function HomeScreen() {
   );
 }
 
-function TodayCard({ item, onPress }: { item: ItineraryItem; onPress: () => void }) {
+function TodayCard({
+  item,
+  onPress,
+}: {
+  item: ItineraryItem;
+  onPress: () => void;
+}) {
   const meta = CATEGORY_META[item.category];
   return (
     <Card onPress={onPress}>
@@ -190,7 +218,9 @@ function TodayCard({ item, onPress }: { item: ItineraryItem; onPress: () => void
           </AppText>
           <View style={styles.metaRow}>
             <Clock size={13} color={colors.textMuted} />
-            <AppText variant="caption">{formatDuration(item.durationMin)}</AppText>
+            <AppText variant="caption">
+              {formatDuration(item.durationMin)}
+            </AppText>
           </View>
         </View>
         <ChevronRight size={18} color={colors.textMuted} />
@@ -209,7 +239,11 @@ function ActionTile({
   onPress: () => void;
 }) {
   return (
-    <TouchableOpacity activeOpacity={0.85} onPress={onPress} style={styles.tile}>
+    <TouchableOpacity
+      activeOpacity={0.85}
+      onPress={onPress}
+      style={styles.tile}
+    >
       <FeatureIcon icon={icon} />
       <AppText variant="cardTitle">{label}</AppText>
     </TouchableOpacity>
@@ -218,9 +252,9 @@ function ActionTile({
 
 const styles = StyleSheet.create({
   greetingRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
     paddingTop: spacing.sm,
     marginBottom: spacing.lg,
   },
@@ -232,14 +266,14 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: 22,
     backgroundColor: colors.mint,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginLeft: spacing.md,
   },
   weather: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: spacing.md,
-    backgroundColor: '#FDECEA',
+    backgroundColor: "#FDECEA",
     borderRadius: radius.xl,
     padding: spacing.base,
     marginBottom: spacing.lg,
@@ -248,25 +282,38 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: radius.md,
-    backgroundColor: '#FAD9D5',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#FAD9D5",
+    alignItems: "center",
+    justifyContent: "center",
   },
   weatherBody: { flex: 1, gap: spacing.xs },
   weatherTitle: { color: colors.alert },
-  weatherText: { color: '#7C4A43' },
-  weatherCta: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: spacing.xs },
-  weatherCtaText: { fontFamily: fonts.interSemiBold, fontSize: 13, color: colors.primary },
+  weatherText: { color: "#7C4A43" },
+  weatherCta: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    marginTop: spacing.xs,
+  },
+  weatherCtaText: {
+    fontFamily: fonts.interSemiBold,
+    fontSize: 13,
+    color: colors.primary,
+  },
   weatherClose: { padding: spacing.xs },
   section: { marginBottom: spacing.xl },
-  todayRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  todayRow: { flexDirection: "row", alignItems: "center", gap: spacing.md },
   timeCol: { width: 56 },
-  time: { fontFamily: fonts.jakartaSemiBold, fontSize: 13, color: colors.primary },
+  time: {
+    fontFamily: fonts.jakartaSemiBold,
+    fontSize: 13,
+    color: colors.primary,
+  },
   todayText: { flex: 1, gap: spacing.xs },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  actionsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
+  metaRow: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
+  actionsGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
   tile: {
-    width: '47.5%',
+    width: "47.5%",
     flexGrow: 1,
     gap: spacing.md,
     padding: spacing.base,

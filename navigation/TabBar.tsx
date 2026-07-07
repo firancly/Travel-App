@@ -9,17 +9,17 @@ import { AppText } from '@/components';
 import { colors, fonts, spacing } from '@/theme';
 
 const ICONS: Record<string, LucideIcon> = {
-  Home,
-  Discover: Compass,
-  MyPlan: CalendarRange,
-  Profile: User,
+  home: Home,
+  discover: Compass,
+  plan: CalendarRange,
+  profile: User,
 };
 
 const LABELS: Record<string, string> = {
-  Home: 'Home',
-  Discover: 'Discover',
-  MyPlan: 'My Plan',
-  Profile: 'Profile',
+  home: 'Home',
+  discover: 'Discover',
+  plan: 'My Plan',
+  profile: 'Profile',
 };
 
 function TabButton({

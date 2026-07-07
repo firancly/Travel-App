@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import {
   View,
   ScrollView,
@@ -6,11 +6,11 @@ import {
   StyleProp,
   ViewStyle,
   RefreshControlProps,
-} from 'react-native';
-import { SafeAreaView, Edge } from 'react-native-safe-area-context';
-import type { LucideIcon } from 'lucide-react-native';
-import { ScreenHeader } from './ScreenHeader';
-import { colors, SCREEN_PADDING, spacing } from '@/theme';
+} from "react-native";
+import { SafeAreaView, Edge } from "react-native-safe-area-context";
+import type { LucideIcon } from "lucide-react-native";
+import { ScreenHeader } from "./ScreenHeader";
+import { colors, SCREEN_PADDING, spacing } from "@/theme";
 
 interface ScreenProps {
   children: React.ReactNode;
@@ -40,7 +40,7 @@ export function Screen({
   scroll = true,
   padded = true,
   contentStyle,
-  edges = ['top'],
+  edges = ["top"],
   refreshControl,
 }: ScreenProps) {
   return (
@@ -67,7 +67,9 @@ export function Screen({
           {children}
         </ScrollView>
       ) : (
-        <View style={[styles.flex, padded && styles.padded, contentStyle]}>{children}</View>
+        <View style={[styles.flex, padded && styles.padded, contentStyle]}>
+          {children}
+        </View>
       )}
     </SafeAreaView>
   );

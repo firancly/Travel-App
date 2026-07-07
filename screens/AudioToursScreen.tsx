@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useRouter } from 'expo-router';
 import { Headphones, Clock, Languages, Play, MapPin } from 'lucide-react-native';
 import { BackHeader, AppText, Card, FeatureIcon, SkeletonCard } from '@/components';
 import { colors, spacing, radius, fonts, SCREEN_PADDING } from '@/theme';
@@ -9,10 +9,9 @@ import { audioTours } from '@/mock';
 import { formatDuration } from '@/utils/time';
 import { useFakeLoading } from '@/hooks/useFakeLoading';
 import type { AudioTour } from '@/types';
-import type { AppNavProp } from '@/navigation/types';
 
 export function AudioToursScreen() {
-  const navigation = useNavigation<AppNavProp>();
+  const router = useRouter();
   const loading = useFakeLoading();
 
   return (
@@ -35,7 +34,7 @@ export function AudioToursScreen() {
               <TourCard
                 key={tour.id}
                 tour={tour}
-                onPress={() => navigation.navigate('AudioPlayer', { tourId: tour.id })}
+                onPress={() => router.push({ pathname: '/audio-player', params: { tourId: tour.id } })}
               />
             ))}
           </View>

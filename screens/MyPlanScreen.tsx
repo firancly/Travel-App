@@ -16,7 +16,7 @@ import Animated, {
   withTiming,
   runOnJS,
 } from 'react-native-reanimated';
-import { useNavigation } from '@react-navigation/native';
+import { useRouter } from 'expo-router';
 import { GripVertical, RefreshCw, Clock, CalendarPlus } from 'lucide-react-native';
 import { ScreenHeader, AppText, FeatureIcon, EmptyState } from '@/components';
 import { colors, spacing, radius, fonts, shadows, hairline, SCREEN_PADDING } from '@/theme';
@@ -24,10 +24,9 @@ import { usePlanStore } from '@/store/usePlanStore';
 import { CATEGORY_META } from '@/utils/categories';
 import { to12h, formatDuration } from '@/utils/time';
 import type { ItineraryItem } from '@/types';
-import type { AppNavProp } from '@/navigation/types';
 
 export function MyPlanScreen() {
-  const navigation = useNavigation<AppNavProp>();
+  const router = useRouter();
   const days = usePlanStore((s) => s.days);
   const reorderDayItems = usePlanStore((s) => s.reorderDayItems);
   const smartSwap = usePlanStore((s) => s.smartSwap);
@@ -81,7 +80,7 @@ export function MyPlanScreen() {
           title="This day is open"
           message="Head to Discover and add a few places to fill it in."
           ctaLabel="Discover places"
-          onCtaPress={() => navigation.navigate('Discover')}
+          onCtaPress={() => router.push('/discover')}
         />
       ) : (
         <DraggableFlatList

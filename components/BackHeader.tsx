@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useRouter } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
 import { AppText } from './AppText';
@@ -16,8 +16,8 @@ interface BackHeaderProps {
 
 /** Header for stacked screens: back affordance above a left-aligned title. */
 export function BackHeader({ title, subtitle, onBack, rightIcon: RightIcon, onRightPress }: BackHeaderProps) {
-  const navigation = useNavigation();
-  const goBack = onBack ?? (() => navigation.goBack());
+  const router = useRouter();
+  const goBack = onBack ?? (() => router.back());
 
   return (
     <View style={styles.container}>

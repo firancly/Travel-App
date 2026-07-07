@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, TouchableOpacity, Alert } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useRouter } from 'expo-router';
 import {
   User,
   Pencil,
@@ -22,10 +22,9 @@ import { usePlanStore } from '@/store/usePlanStore';
 import { audioTours } from '@/mock';
 import { formatDateRange } from '@/utils/date';
 import { cityName } from '@/utils/trip';
-import type { AppNavProp } from '@/navigation/types';
 
 export function ProfileScreen() {
-  const navigation = useNavigation<AppNavProp>();
+  const router = useRouter();
   const prefs = usePrefsStore();
   const editPreferences = usePrefsStore((s) => s.editPreferences);
   const resetPrefs = usePrefsStore((s) => s.reset);
@@ -87,9 +86,9 @@ export function ProfileScreen() {
       <View style={styles.section}>
         <SectionHeader title="Explore" />
         <Card noPadding>
-          <MenuRow icon={Headphones} label="Audio tours" onPress={() => navigation.navigate('AudioTours')} />
-          <MenuRow icon={Ticket} label="Bookings" onPress={() => navigation.navigate('Bookings')} />
-          <MenuRow icon={Bookmark} label="Saved places" onPress={() => navigation.navigate('Discover')} last />
+          <MenuRow icon={Headphones} label="Audio tours" onPress={() => router.push('/audio-tours')} />
+          <MenuRow icon={Ticket} label="Bookings" onPress={() => router.push('/bookings')} />
+          <MenuRow icon={Bookmark} label="Saved places" onPress={() => router.push('/discover')} last />
         </Card>
       </View>
 

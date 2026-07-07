@@ -4,29 +4,16 @@ import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
-import { NavigationContainer, DefaultTheme, Theme } from '@react-navigation/native';
+import { Stack } from 'expo-router';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { fontAssets, colors } from '@/theme';
 import { usePrefsStore } from '@/store/usePrefsStore';
-import { RootNavigator } from '@/navigation/RootNavigator';
 
 // Keep the native splash up until fonts + persisted state are ready.
 SplashScreen.preventAutoHideAsync();
 
-const navTheme: Theme = {
-  ...DefaultTheme,
-  colors: {
-    ...DefaultTheme.colors,
-    background: colors.screen,
-    primary: colors.primary,
-    card: colors.white,
-    text: colors.textPrimary,
-    border: colors.border,
-  },
-};
-
-export default function App() {
+export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts(fontAssets);
   const hydrated = usePrefsStore((s) => s._hydrated);
   const ready = (fontsLoaded || !!fontError) && hydrated;
@@ -41,10 +28,20 @@ export default function App() {
     <GestureHandlerRootView style={{ flex: 1 }} onLayout={onLayoutRoot}>
       <SafeAreaProvider>
         <BottomSheetModalProvider>
-          <NavigationContainer theme={navTheme}>
-            <StatusBar style="dark" />
-            <RootNavigator />
-          </NavigationContainer>
+          <StatusBar style="dark" />
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              contentStyle: { backgroundColor: colors.screen },
+            }}
+          >
+            <Stack.Screen name="index" />
+            <Stack.Screen name="onboarding" />
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="audio-tours" options={{ animation: 'slide_from_right' }} />
+            <Stack.Screen name="bookings" options={{ animation: 'slide_from_right' }} />
+            <Stack.Screen name="audio-player" options={{ animation: 'slide_from_bottom' }} />
+          </Stack>
         </BottomSheetModalProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

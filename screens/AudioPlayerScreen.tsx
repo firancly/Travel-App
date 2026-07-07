@@ -1,14 +1,13 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRoute, RouteProp } from '@react-navigation/native';
+import { useLocalSearchParams } from 'expo-router';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import { Play, Pause, SkipBack, SkipForward, MapPin } from 'lucide-react-native';
 import { BackHeader, AppText, Tag, MapMarker } from '@/components';
 import { colors, spacing, radius, fonts, shadows, mutedMapStyle, SCREEN_PADDING } from '@/theme';
 import { findAudioTour } from '@/mock';
 import { formatDuration } from '@/utils/time';
-import type { RootStackParamList } from '@/navigation/types';
 
 function clock(totalSec: number): string {
   const s = Math.max(0, Math.floor(totalSec));
@@ -18,8 +17,8 @@ function clock(totalSec: number): string {
 }
 
 export function AudioPlayerScreen() {
-  const route = useRoute<RouteProp<RootStackParamList, 'AudioPlayer'>>();
-  const tour = findAudioTour(route.params.tourId);
+  const { tourId } = useLocalSearchParams<{ tourId: string }>();
+  const tour = findAudioTour(tourId);
   const mapRef = useRef<MapView>(null);
 
   const totalSec = (tour?.durationMin ?? 0) * 60;
