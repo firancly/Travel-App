@@ -18,9 +18,10 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { GripVertical, RefreshCw, Clock, CalendarPlus } from 'lucide-react-native';
-import { ScreenHeader, AppText, FeatureIcon, EmptyState } from '@/components';
+import { ScreenHeader, AppText, FeatureIcon, EmptyState, SkeletonCard } from '@/components';
 import { colors, spacing, radius, fonts, shadows, hairline, SCREEN_PADDING } from '@/theme';
 import { usePlanStore } from '@/store/usePlanStore';
+import { usePrefsStore } from '@/store/usePrefsStore';
 import { CATEGORY_META } from '@/utils/categories';
 import { to12h, formatDuration } from '@/utils/time';
 import type { ItineraryItem } from '@/types';
@@ -30,6 +31,20 @@ export function MyPlanScreen() {
   const days = usePlanStore((s) => s.days);
   const reorderDayItems = usePlanStore((s) => s.reorderDayItems);
   const smartSwap = usePlanStore((s) => s.smartSwap);
+  const generatePlan = usePlanStore((s) => s.generatePlan);
+  const generating = usePlanStore((s) => s.generating);
+  const prefs = usePrefsStore();
+
+  const regenerate = () => {
+    if (generating) return;
+    generatePlan({
+      destination: prefs.destination,
+      durationDays: prefs.durationDays,
+      budget: prefs.budget,
+      interests: prefs.interests,
+      startDate: prefs.startDate,
+    });
+  };
 
   const [dayNumber, setDayNumber] = useState(days[0]?.day ?? 1);
   const day = days.find((d) => d.day === dayNumber) ?? days[0];
@@ -53,7 +68,12 @@ export function MyPlanScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <ScreenHeader title="My Plan" subtitle={day?.label} />
+      <ScreenHeader
+        title="My Plan"
+        subtitle={day?.label}
+        rightIcon={RefreshCw}
+        onRightPress={regenerate}
+      />
 
       {/* Day selector */}
       <View style={styles.dayRow}>
@@ -74,7 +94,13 @@ export function MyPlanScreen() {
         })}
       </View>
 
-      {items.length === 0 ? (
+      {generating ? (
+        <View style={styles.skeletonWrap}>
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
+        </View>
+      ) : items.length === 0 ? (
         <EmptyState
           icon={CalendarPlus}
           title="This day is open"
@@ -208,6 +234,7 @@ const styles = StyleSheet.create({
   dayText: { fontFamily: fonts.interMedium, fontSize: 14, color: colors.textSecondary },
   dayTextActive: { color: colors.white },
   listContent: { paddingHorizontal: SCREEN_PADDING, paddingBottom: spacing.xxl },
+  skeletonWrap: { paddingHorizontal: SCREEN_PADDING, gap: spacing.md },
   summary: {
     flexDirection: 'row',
     alignItems: 'center',

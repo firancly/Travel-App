@@ -4,6 +4,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { ItineraryDay, ItineraryItem, Place } from '@/types';
 import { itinerary as mockItinerary, swapPool } from '@/mock';
 import { addMinutes } from '@/utils/time';
+import { generateItinerary, type GeneratePrefs } from '@/services/itinerary';
+
+export type PlanSource = 'mock' | 'ai';
 
 let idCounter = 0;
 const genId = (prefix: string) => `${prefix}-${Date.now().toString(36)}-${idCounter++}`;
@@ -18,12 +21,18 @@ function sortByTime(items: ItineraryItem[]): ItineraryItem[] {
 
 interface PlanState {
   days: ItineraryDay[];
+  source: PlanSource;
+  generating: boolean;
+  error: string | null;
 
   addPlaceToPlan: (place: Place) => number; // returns the day number it landed in
   smartSwap: (dayNumber: number, itemId: string) => void;
   reorderDayItems: (dayNumber: number, items: ItineraryItem[]) => void;
   removeItem: (dayNumber: number, itemId: string) => void;
   isPlaceInPlan: (placeId: string) => boolean;
+  /** Generate a fresh plan via the AI proxy. Returns true on success; keeps the
+   *  current plan as a fallback on failure. */
+  generatePlan: (prefs: GeneratePrefs) => Promise<boolean>;
   resetPlan: () => void;
 }
 
@@ -31,6 +40,9 @@ export const usePlanStore = create<PlanState>()(
   persist(
     (set, get) => ({
       days: seedDays(),
+      source: 'mock',
+      generating: false,
+      error: null,
 
       addPlaceToPlan: (place) => {
         const { days } = get();
@@ -106,11 +118,26 @@ export const usePlanStore = create<PlanState>()(
       isPlaceInPlan: (placeId) =>
         get().days.some((d) => d.items.some((i) => i.placeId === placeId)),
 
-      resetPlan: () => set({ days: seedDays() }),
+      generatePlan: async (prefs) => {
+        set({ generating: true, error: null });
+        try {
+          const days = await generateItinerary(prefs);
+          set({ days, source: 'ai', generating: false });
+          return true;
+        } catch (e: any) {
+          // Keep the existing plan as a fallback; surface a soft error.
+          set({ generating: false, error: String(e?.message ?? 'generation failed') });
+          return false;
+        }
+      },
+
+      resetPlan: () => set({ days: seedDays(), source: 'mock', error: null }),
     }),
     {
       name: 'ntm-plan',
       storage: createJSONStorage(() => AsyncStorage),
+      // Persist only the plan itself, not transient generation flags.
+      partialize: (s) => ({ days: s.days, source: s.source }),
     },
   ),
 );

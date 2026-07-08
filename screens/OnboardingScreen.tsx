@@ -27,6 +27,7 @@ import { AppText, Button, FeatureIcon } from '@/components';
 import { DateField } from '@/components/DateField';
 import { colors, spacing, radius, fonts, SCREEN_PADDING } from '@/theme';
 import { usePrefsStore } from '@/store/usePrefsStore';
+import { usePlanStore } from '@/store/usePlanStore';
 import type { BudgetRange, Interest } from '@/types';
 import { formatDateRange } from '@/utils/date';
 
@@ -70,13 +71,22 @@ export function OnboardingScreen() {
     completeOnboarding,
   } = usePrefsStore();
 
+  const generatePlan = usePlanStore((s) => s.generatePlan);
+  const generating = usePlanStore((s) => s.generating);
+
   const step0Valid = budget !== null && interests.length > 0 && durationDays > 0;
   const step1Valid = destination.trim().length > 0 && !!startDate;
   const canAdvance = step === 0 ? step0Valid : step === 1 ? step1Valid : true;
 
-  const onNext = () => {
-    if (step < 2) setStep((s) => s + 1);
-    else completeOnboarding();
+  const onNext = async () => {
+    if (step < 2) {
+      setStep((s) => s + 1);
+      return;
+    }
+    // Final step: try to generate an AI plan (falls back to the sample plan on
+    // failure or when no proxy URL is configured), then enter the app.
+    await generatePlan({ destination, durationDays, budget, interests, startDate });
+    completeOnboarding();
   };
   const onBack = () => setStep((s) => Math.max(0, s - 1));
 
@@ -267,9 +277,10 @@ export function OnboardingScreen() {
             <Button label="Back" variant="secondary" onPress={onBack} style={styles.backBtn} />
           ) : null}
           <Button
-            label={step === 2 ? 'Start exploring' : 'Continue'}
+            label={step === 2 ? (generating ? 'Building your plan...' : 'Start exploring') : 'Continue'}
             onPress={onNext}
-            disabled={!canAdvance}
+            disabled={!canAdvance || generating}
+            loading={generating}
             style={styles.nextBtn}
           />
         </View>

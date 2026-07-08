@@ -39,6 +39,9 @@ export interface ItineraryItem {
   durationMin: number;
   category: PlaceCategory;
   placeId?: string;
+  // Present on AI-generated items (mock items resolve coords via placeId instead).
+  latitude?: number;
+  longitude?: number;
 }
 
 export interface ItineraryDay {
