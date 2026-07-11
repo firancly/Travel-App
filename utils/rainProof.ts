@@ -10,7 +10,7 @@ export function isWeatherSensitive(item: ItineraryItem): boolean {
   return item.category === 'nature' || item.category === 'hidden';
 }
 
-function hourOf(time: string): number {
+export function hourOf(time: string): number {
   return Number(time.split(':')[0]);
 }
 

@@ -22,7 +22,7 @@ import { useWeatherStore } from '@/store/useWeatherStore';
 import { CATEGORY_META } from '@/utils/categories';
 import { to12h, formatDuration } from '@/utils/time';
 import { getItemCoords } from '@/utils/coords';
-import { dateForDay, wetHoursForDate, rainProofReorder } from '@/utils/rainProof';
+import { dateForDay, wetHoursForDate, rainProofReorder, hourOf } from '@/utils/rainProof';
 import type { ItineraryItem } from '@/types';
 
 type PlanView = 'list' | 'map';
@@ -134,6 +134,7 @@ export function MyPlanScreen() {
         item={item}
         drag={drag}
         isActive={isActive}
+        isWet={!!wetHours && wetHours.has(hourOf(item.time))}
         onSwap={() => smartSwap(dayNumber, item.id)}
       />
     </ScaleDecorator>
@@ -301,11 +302,13 @@ function PlanRow({
   item,
   drag,
   isActive,
+  isWet,
   onSwap,
 }: {
   item: ItineraryItem;
   drag: () => void;
   isActive: boolean;
+  isWet: boolean;
   onSwap: () => Promise<void>;
 }) {
   const meta = CATEGORY_META[item.category];
@@ -322,6 +325,11 @@ function PlanRow({
     <View style={styles.rowWrap}>
       <View style={styles.timeCol}>
         <AppText style={styles.time}>{to12h(item.time)}</AppText>
+        {isWet && (
+          <View style={styles.wetBadge}>
+            <CloudRain size={11} color={colors.alert} strokeWidth={2.4} />
+          </View>
+        )}
         <View style={styles.timeline} />
       </View>
 
@@ -444,6 +452,7 @@ const styles = StyleSheet.create({
   rowWrap: { flexDirection: 'row', marginBottom: spacing.md },
   timeCol: { width: 56, alignItems: 'center' },
   time: { fontFamily: fonts.jakartaSemiBold, fontSize: 12, color: colors.primary },
+  wetBadge: { marginTop: spacing.xs },
   timeline: {
     flex: 1,
     width: 2,
