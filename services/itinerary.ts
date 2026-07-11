@@ -44,6 +44,54 @@ export async function generateItinerary(p: GeneratePrefs): Promise<ItineraryDay[
   }
 }
 
+export interface SwapItem {
+  title: string;
+  description: string;
+  durationMin: number;
+  category: PlaceCategory;
+  latitude: number;
+  longitude: number;
+}
+
+/** Asks the Worker proxy for one replacement place. Throws on failure (caller falls back). */
+export async function swapStop(
+  destination: string,
+  category: PlaceCategory,
+  excludeTitles: string[],
+  timeSlot?: string,
+  nearLat?: number,
+  nearLng?: number,
+): Promise<SwapItem> {
+  if (!API) throw new Error('EXPO_PUBLIC_ITINERARY_API not set');
+
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
+  try {
+    const res = await fetch(`${API.replace(/\/$/, '')}/swap-item`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: ctrl.signal,
+      body: JSON.stringify({ destination, category, excludeTitles, timeSlot, nearLat, nearLng }),
+    });
+    if (!res.ok) throw new Error(`swap api ${res.status}`);
+    const data: any = await res.json();
+    const it = data?.item;
+    if (!it || typeof it.title !== 'string' || typeof it.latitude !== 'number' || typeof it.longitude !== 'number') {
+      throw new Error('bad swap response shape');
+    }
+    return {
+      title: it.title,
+      description: String(it.description ?? ''),
+      durationMin: Number(it.durationMin) || 60,
+      category: CATS.includes(it.category) ? it.category : category,
+      latitude: it.latitude,
+      longitude: it.longitude,
+    };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 function normalize(data: any): ItineraryDay[] {
   if (!data || !Array.isArray(data.days)) throw new Error('bad response shape');
 

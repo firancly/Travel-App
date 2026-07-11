@@ -1,30 +1,29 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   StyleSheet,
   TouchableOpacity,
-  useWindowDimensions,
+  ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DraggableFlatList, {
   RenderItemParams,
   ScaleDecorator,
 } from 'react-native-draggable-flatlist';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  runOnJS,
-} from 'react-native-reanimated';
+import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useRouter } from 'expo-router';
-import { GripVertical, RefreshCw, Clock, CalendarPlus } from 'lucide-react-native';
-import { ScreenHeader, AppText, FeatureIcon, EmptyState, SkeletonCard } from '@/components';
-import { colors, spacing, radius, fonts, shadows, hairline, SCREEN_PADDING } from '@/theme';
+import { GripVertical, RefreshCw, Clock, CalendarPlus, MapPin } from 'lucide-react-native';
+import { ScreenHeader, AppText, FeatureIcon, EmptyState, SkeletonCard, MapMarker } from '@/components';
+import { colors, spacing, radius, fonts, shadows, hairline, mutedMapStyle, SCREEN_PADDING } from '@/theme';
 import { usePlanStore } from '@/store/usePlanStore';
 import { usePrefsStore } from '@/store/usePrefsStore';
 import { CATEGORY_META } from '@/utils/categories';
 import { to12h, formatDuration } from '@/utils/time';
+import { getItemCoords } from '@/utils/coords';
 import type { ItineraryItem } from '@/types';
+
+type PlanView = 'list' | 'map';
 
 export function MyPlanScreen() {
   const router = useRouter();
@@ -47,6 +46,7 @@ export function MyPlanScreen() {
   };
 
   const [dayNumber, setDayNumber] = useState(days[0]?.day ?? 1);
+  const [view, setView] = useState<PlanView>('list');
   const day = days.find((d) => d.day === dayNumber) ?? days[0];
   const items = day?.items ?? [];
 
@@ -54,6 +54,43 @@ export function MyPlanScreen() {
     () => items.reduce((sum, i) => sum + i.durationMin, 0),
     [items],
   );
+
+  // Plottable stops in plan order — numbering + the polyline both derive from this.
+  const points = useMemo(
+    () =>
+      items
+        .map((it) => ({ item: it, coord: getItemCoords(it) }))
+        .filter((p): p is { item: ItineraryItem; coord: NonNullable<ReturnType<typeof getItemCoords>> } => !!p.coord),
+    [items],
+  );
+  const coords = useMemo(() => points.map((p) => p.coord), [points]);
+
+  const mapRef = useRef<MapView>(null);
+  useEffect(() => {
+    if (view !== 'map') return;
+    if (coords.length === 1) {
+      const t = setTimeout(
+        () =>
+          mapRef.current?.animateToRegion(
+            { ...coords[0], latitudeDelta: 0.02, longitudeDelta: 0.02 },
+            300,
+          ),
+        400,
+      );
+      return () => clearTimeout(t);
+    }
+    if (coords.length > 1) {
+      const t = setTimeout(
+        () =>
+          mapRef.current?.fitToCoordinates(coords, {
+            edgePadding: { top: 60, right: 60, bottom: 60, left: 60 },
+            animated: true,
+          }),
+        400,
+      );
+      return () => clearTimeout(t);
+    }
+  }, [view, dayNumber, coords]);
 
   const renderItem = ({ item, drag, isActive }: RenderItemParams<ItineraryItem>) => (
     <ScaleDecorator activeScale={1.03}>
@@ -94,6 +131,29 @@ export function MyPlanScreen() {
         })}
       </View>
 
+      {!generating && items.length > 0 && (
+        <View style={styles.segmentRow}>
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={() => setView('list')}
+            style={[styles.segment, view === 'list' && styles.segmentActive]}
+          >
+            <AppText style={[styles.segmentText, view === 'list' && styles.segmentTextActive]}>
+              List
+            </AppText>
+          </TouchableOpacity>
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={() => setView('map')}
+            style={[styles.segment, view === 'map' && styles.segmentActive]}
+          >
+            <AppText style={[styles.segmentText, view === 'map' && styles.segmentTextActive]}>
+              Map
+            </AppText>
+          </TouchableOpacity>
+        </View>
+      )}
+
       {generating ? (
         <View style={styles.skeletonWrap}>
           <SkeletonCard />
@@ -108,6 +168,50 @@ export function MyPlanScreen() {
           ctaLabel="Discover places"
           onCtaPress={() => router.push('/discover')}
         />
+      ) : view === 'map' ? (
+        <View style={styles.mapWrap}>
+          {Platform.OS === 'web' ? (
+            <View style={styles.webFallback}>
+              <MapPin size={26} color={colors.primary} />
+              <AppText variant="caption" center style={{ marginTop: spacing.sm }}>
+                Map view available on iOS / Android
+              </AppText>
+            </View>
+          ) : points.length === 0 ? (
+            <View style={styles.webFallback}>
+              <MapPin size={26} color={colors.primary} />
+              <AppText variant="caption" center style={{ marginTop: spacing.sm }}>
+                No map data for this day
+              </AppText>
+            </View>
+          ) : (
+            <MapView
+              ref={mapRef}
+              style={StyleSheet.absoluteFill}
+              provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
+              customMapStyle={mutedMapStyle}
+              initialRegion={{
+                latitude: coords[0].latitude,
+                longitude: coords[0].longitude,
+                latitudeDelta: 0.03,
+                longitudeDelta: 0.03,
+              }}
+            >
+              {coords.length > 1 && (
+                <Polyline coordinates={coords} strokeColor={colors.primary} strokeWidth={4} />
+              )}
+              {points.map((p, i) => (
+                <Marker
+                  key={p.item.id}
+                  coordinate={p.coord}
+                  anchor={{ x: 0.5, y: 0.5 }}
+                >
+                  <MapMarker number={i + 1} />
+                </Marker>
+              ))}
+            </MapView>
+          )}
+        </View>
       ) : (
         <DraggableFlatList
           data={items}
@@ -137,8 +241,6 @@ export function MyPlanScreen() {
   );
 }
 
-const SWAP_MS = 150;
-
 function PlanRow({
   item,
   drag,
@@ -148,32 +250,20 @@ function PlanRow({
   item: ItineraryItem;
   drag: () => void;
   isActive: boolean;
-  onSwap: () => void;
+  onSwap: () => Promise<void>;
 }) {
-  const { width } = useWindowDimensions();
-  const tx = useSharedValue(0);
-  const opacity = useSharedValue(1);
   const meta = CATEGORY_META[item.category];
+  const [swapping, setSwapping] = useState(false);
 
-  const animStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: tx.value }],
-    opacity: opacity.value,
-  }));
-
-  const handleSwap = () => {
-    // Slide the old card out to the left, swap data, slide the new one in from the right.
-    opacity.value = withTiming(0.5, { duration: SWAP_MS });
-    tx.value = withTiming(-width, { duration: SWAP_MS }, (finished) => {
-      if (!finished) return;
-      runOnJS(onSwap)();
-      tx.value = width;
-      opacity.value = withTiming(1, { duration: SWAP_MS });
-      tx.value = withTiming(0, { duration: SWAP_MS });
-    });
+  const handleSwap = async () => {
+    if (swapping) return;
+    setSwapping(true);
+    await onSwap();
+    setSwapping(false);
   };
 
   return (
-    <Animated.View style={[styles.rowWrap, animStyle]}>
+    <View style={styles.rowWrap}>
       <View style={styles.timeCol}>
         <AppText style={styles.time}>{to12h(item.time)}</AppText>
         <View style={styles.timeline} />
@@ -193,9 +283,20 @@ function PlanRow({
               <Clock size={13} color={colors.textMuted} />
               <AppText variant="caption">{formatDuration(item.durationMin)}</AppText>
             </View>
-            <TouchableOpacity activeOpacity={0.8} style={styles.swapBtn} onPress={handleSwap}>
-              <RefreshCw size={14} color={colors.primary} strokeWidth={2.2} />
-              <AppText style={styles.swapText}>Smart swap</AppText>
+            <TouchableOpacity
+              activeOpacity={0.8}
+              style={styles.swapBtn}
+              onPress={handleSwap}
+              disabled={swapping}
+            >
+              {swapping ? (
+                <ActivityIndicator size="small" color={colors.primary} />
+              ) : (
+                <RefreshCw size={14} color={colors.primary} strokeWidth={2.2} />
+              )}
+              <AppText style={styles.swapText}>
+                {swapping ? 'Swapping…' : 'Smart swap'}
+              </AppText>
             </TouchableOpacity>
           </View>
         </View>
@@ -209,7 +310,7 @@ function PlanRow({
           <GripVertical size={20} color={colors.grip} />
         </TouchableOpacity>
       </View>
-    </Animated.View>
+    </View>
   );
 }
 
@@ -233,6 +334,32 @@ const styles = StyleSheet.create({
   dayPillActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   dayText: { fontFamily: fonts.interMedium, fontSize: 14, color: colors.textSecondary },
   dayTextActive: { color: colors.white },
+  segmentRow: {
+    flexDirection: 'row',
+    marginHorizontal: SCREEN_PADDING,
+    marginBottom: spacing.base,
+    backgroundColor: colors.mint,
+    borderRadius: radius.pill,
+    padding: 4,
+  },
+  segment: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    borderRadius: radius.pill,
+  },
+  segmentActive: { backgroundColor: colors.white, ...shadows.card },
+  segmentText: { fontFamily: fonts.interMedium, fontSize: 14, color: colors.textSecondary },
+  segmentTextActive: { color: colors.primary },
+  mapWrap: {
+    flex: 1,
+    marginHorizontal: SCREEN_PADDING,
+    marginBottom: spacing.xxl,
+    borderRadius: radius.xl,
+    overflow: 'hidden',
+    backgroundColor: colors.mint,
+  },
+  webFallback: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.lg },
   listContent: { paddingHorizontal: SCREEN_PADDING, paddingBottom: spacing.xxl },
   skeletonWrap: { paddingHorizontal: SCREEN_PADDING, gap: spacing.md },
   summary: {

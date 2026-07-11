@@ -4,7 +4,29 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { ItineraryDay, ItineraryItem, Place } from '@/types';
 import { itinerary as mockItinerary, swapPool } from '@/mock';
 import { addMinutes } from '@/utils/time';
-import { generateItinerary, type GeneratePrefs } from '@/services/itinerary';
+import { generateItinerary, swapStop, itineraryApiConfigured, type GeneratePrefs } from '@/services/itinerary';
+import { usePrefsStore } from '@/store/usePrefsStore';
+import { getItemCoords, type Coords } from '@/utils/coords';
+
+/** Anchor for a proximity-aware swap: midpoint of the item's neighbors (whichever
+ *  have coords), else the item's own coord, else undefined (city-wide fallback). */
+function swapAnchor(items: ItineraryItem[], itemId: string): Coords | undefined {
+  const idx = items.findIndex((i) => i.id === itemId);
+  if (idx === -1) return undefined;
+
+  const prevCoord = idx > 0 ? getItemCoords(items[idx - 1]) : null;
+  const nextCoord = idx < items.length - 1 ? getItemCoords(items[idx + 1]) : null;
+
+  if (prevCoord && nextCoord) {
+    return {
+      latitude: (prevCoord.latitude + nextCoord.latitude) / 2,
+      longitude: (prevCoord.longitude + nextCoord.longitude) / 2,
+    };
+  }
+  if (prevCoord) return prevCoord;
+  if (nextCoord) return nextCoord;
+  return getItemCoords(items[idx]) ?? undefined;
+}
 
 export type PlanSource = 'mock' | 'ai';
 
@@ -26,7 +48,7 @@ interface PlanState {
   error: string | null;
 
   addPlaceToPlan: (place: Place) => number; // returns the day number it landed in
-  smartSwap: (dayNumber: number, itemId: string) => void;
+  smartSwap: (dayNumber: number, itemId: string) => Promise<void>;
   reorderDayItems: (dayNumber: number, items: ItineraryItem[]) => void;
   removeItem: (dayNumber: number, itemId: string) => void;
   isPlaceInPlan: (placeId: string) => boolean;
@@ -73,31 +95,58 @@ export const usePlanStore = create<PlanState>()(
         return target.day;
       },
 
-      smartSwap: (dayNumber, itemId) => {
+      smartSwap: async (dayNumber, itemId) => {
         const { days } = get();
         const day = days.find((d) => d.day === dayNumber);
         const item = day?.items.find((i) => i.id === itemId);
         if (!day || !item) return;
 
-        const usedTitles = new Set(days.flatMap((d) => d.items.map((i) => i.title)));
+        const usedTitles = days.flatMap((d) => d.items.map((i) => i.title));
+
+        const applyReplacement = (replacement: ItineraryItem) => {
+          set({
+            days: get().days.map((d) =>
+              d.day === dayNumber
+                ? { ...d, items: d.items.map((i) => (i.id === itemId ? replacement : i)) }
+                : d,
+            ),
+          });
+        };
+
+        if (itineraryApiConfigured()) {
+          try {
+            const destination = usePrefsStore.getState().destination;
+            const anchor = swapAnchor(day.items, itemId);
+            const swapped = await swapStop(
+              destination,
+              item.category,
+              usedTitles,
+              item.time,
+              anchor?.latitude,
+              anchor?.longitude,
+            );
+            applyReplacement({
+              ...swapped,
+              id: item.id, // keep the same id + slot so the row can animate in place
+              time: item.time,
+            });
+            return;
+          } catch {
+            // fall through to the local mock pool below
+          }
+        }
+
+        const usedSet = new Set(usedTitles);
         const sameCategory = swapPool.filter((s) => s.category === item.category);
-        const fresh = sameCategory.filter((s) => !usedTitles.has(s.title));
+        const fresh = sameCategory.filter((s) => !usedSet.has(s.title));
         const pool = fresh.length ? fresh : sameCategory;
         if (pool.length === 0) return;
 
         const pick = pool[Math.floor(Math.random() * pool.length)];
-        const replacement: ItineraryItem = {
+        applyReplacement({
           ...pick,
-          id: item.id, // keep the same id + slot so the row can animate in place
+          id: item.id,
           time: item.time,
-        };
-
-        set({
-          days: days.map((d) =>
-            d.day === dayNumber
-              ? { ...d, items: d.items.map((i) => (i.id === itemId ? replacement : i)) }
-              : d,
-          ),
         });
       },
 

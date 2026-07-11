@@ -81,10 +81,3 @@ export interface Booking {
   partySize?: number;
 }
 
-export interface Weather {
-  condition: 'rain' | 'sunny' | 'clouds';
-  tempC: number;
-  summary: string;
-  warning: string | null;
-  affectedItemId: string | null;
-}

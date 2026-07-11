@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { View, StyleSheet, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
 import {
@@ -26,7 +26,7 @@ import {
 import { colors, spacing, radius, fonts } from "@/theme";
 import { usePrefsStore } from "@/store/usePrefsStore";
 import { usePlanStore } from "@/store/usePlanStore";
-import { weather } from "@/mock";
+import { useWeatherStore } from "@/store/useWeatherStore";
 import { CATEGORY_META } from "@/utils/categories";
 import { getTripInfo, cityName } from "@/utils/trip";
 import { to12h, formatDuration } from "@/utils/time";
@@ -46,7 +46,6 @@ export function HomeScreen() {
 
   const prefs = usePrefsStore();
   const days = usePlanStore((s) => s.days);
-  const smartSwap = usePlanStore((s) => s.smartSwap);
 
   const trip = useMemo(() => getTripInfo(prefs), [prefs]);
   const todayIdx = Math.min(trip.dayIndex, days.length - 1);
@@ -54,27 +53,26 @@ export function HomeScreen() {
   const todayItems = today?.items ?? [];
 
   const [weatherDismissed, setWeatherDismissed] = useState(false);
+  const loadWeather = useWeatherStore((s) => s.load);
+  const weather = useWeatherStore((s) => s.data);
+  const weatherLoading = useWeatherStore((s) => s.loading);
 
-  // Locate the day that owns the weather-affected item.
-  const affectedDay = useMemo(
-    () =>
-      weather.affectedItemId
-        ? days.find((d) => d.items.some((i) => i.id === weather.affectedItemId))
-        : undefined,
-    [days],
-  );
-  const showWeather =
-    !weatherDismissed &&
-    weather.condition === "rain" &&
-    !!weather.warning &&
-    !!affectedDay;
+  useEffect(() => {
+    if (prefs.destination) loadWeather(prefs.destination);
+  }, [prefs.destination, loadWeather]);
+
+  const rainy = weather
+    ? weather.todayRainChance > 50 || weather.current.condition === "rain" || weather.current.condition === "thunder"
+    : false;
+  const showWeather = !weatherDismissed && rainy;
+  const weatherTitle = weather?.current.condition === "thunder" ? "Thunderstorms likely" : "Rain likely today";
+  const weatherDetail = weather
+    ? `${weather.todayRainChance}% chance of rain, ${Math.round(weather.current.tempC)}°C now. Swap outdoor plans for an indoor pick?`
+    : "";
 
   const onWeatherSwap = () => {
-    if (affectedDay && weather.affectedItemId) {
-      smartSwap(affectedDay.day, weather.affectedItemId);
-      setWeatherDismissed(true);
-      router.push("/plan");
-    }
+    setWeatherDismissed(true);
+    router.push("/plan");
   };
 
   return (
@@ -100,6 +98,9 @@ export function HomeScreen() {
       </View>
 
       {/* Weather banner */}
+      {weatherLoading && !weather && !weatherDismissed && (
+        <View style={styles.weatherSkeleton} />
+      )}
       {showWeather && (
         <View style={styles.weather}>
           <View style={styles.weatherIcon}>
@@ -107,10 +108,10 @@ export function HomeScreen() {
           </View>
           <View style={styles.weatherBody}>
             <AppText variant="bodyStrong" style={styles.weatherTitle}>
-              {weather.summary}
+              {weatherTitle}
             </AppText>
             <AppText variant="body" style={styles.weatherText}>
-              {weather.warning}
+              {weatherDetail}
             </AppText>
             <TouchableOpacity
               activeOpacity={0.8}
@@ -276,6 +277,12 @@ const styles = StyleSheet.create({
     backgroundColor: "#FDECEA",
     borderRadius: radius.xl,
     padding: spacing.base,
+    marginBottom: spacing.lg,
+  },
+  weatherSkeleton: {
+    height: 72,
+    borderRadius: radius.xl,
+    backgroundColor: colors.mint,
     marginBottom: spacing.lg,
   },
   weatherIcon: {

@@ -1,32 +1,41 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import { colors, shadows } from '@/theme';
+import { AppText } from '@/components/AppText';
+import { colors, shadows, fonts } from '@/theme';
 
 /**
  * Custom map pin.
- *  - default: small green circle with a white center dot
- *  - selected: larger white circle with a green ring
+ *  - default: small green circle with a white center dot (or a stop number)
+ *  - selected: larger white circle with a green ring (or a stop number)
  */
-export function MapMarker({ selected }: { selected?: boolean }) {
+export function MapMarker({ selected, number }: { selected?: boolean; number?: number }) {
   if (selected) {
     return (
       <View style={[styles.selectedOuter, shadows.floating]}>
-        <View style={styles.selectedInner} />
+        {number != null ? (
+          <AppText style={styles.selectedNumber}>{number}</AppText>
+        ) : (
+          <View style={styles.selectedInner} />
+        )}
       </View>
     );
   }
   return (
     <View style={[styles.outer, shadows.card]}>
-      <View style={styles.innerDot} />
+      {number != null ? (
+        <AppText style={styles.number}>{number}</AppText>
+      ) : (
+        <View style={styles.innerDot} />
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   outer: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
@@ -54,5 +63,17 @@ const styles = StyleSheet.create({
     height: 12,
     borderRadius: 6,
     backgroundColor: colors.primary,
+  },
+  number: {
+    fontFamily: fonts.interSemiBold,
+    fontSize: 11,
+    lineHeight: 13,
+    color: colors.white,
+  },
+  selectedNumber: {
+    fontFamily: fonts.interSemiBold,
+    fontSize: 13,
+    lineHeight: 15,
+    color: colors.primary,
   },
 });
