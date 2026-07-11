@@ -58,8 +58,8 @@ export function HomeScreen() {
   const weatherLoading = useWeatherStore((s) => s.loading);
 
   useEffect(() => {
-    if (prefs.destination) loadWeather(prefs.destination);
-  }, [prefs.destination, loadWeather]);
+    if (prefs.destination) loadWeather(prefs.destination, prefs.durationDays);
+  }, [prefs.destination, prefs.durationDays, loadWeather]);
 
   const rainy = weather
     ? weather.todayRainChance > 50 || weather.current.condition === "rain" || weather.current.condition === "thunder"

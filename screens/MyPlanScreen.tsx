@@ -13,14 +13,16 @@ import DraggableFlatList, {
 } from 'react-native-draggable-flatlist';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useRouter } from 'expo-router';
-import { GripVertical, RefreshCw, Clock, CalendarPlus, MapPin } from 'lucide-react-native';
-import { ScreenHeader, AppText, FeatureIcon, EmptyState, SkeletonCard, MapMarker } from '@/components';
+import { GripVertical, RefreshCw, Clock, CalendarPlus, MapPin, CloudRain } from 'lucide-react-native';
+import { ScreenHeader, AppText, Button, FeatureIcon, EmptyState, SkeletonCard, MapMarker } from '@/components';
 import { colors, spacing, radius, fonts, shadows, hairline, mutedMapStyle, SCREEN_PADDING } from '@/theme';
 import { usePlanStore } from '@/store/usePlanStore';
 import { usePrefsStore } from '@/store/usePrefsStore';
+import { useWeatherStore } from '@/store/useWeatherStore';
 import { CATEGORY_META } from '@/utils/categories';
 import { to12h, formatDuration } from '@/utils/time';
 import { getItemCoords } from '@/utils/coords';
+import { dateForDay, wetHoursForDate, rainProofReorder } from '@/utils/rainProof';
 import type { ItineraryItem } from '@/types';
 
 type PlanView = 'list' | 'map';
@@ -54,6 +56,40 @@ export function MyPlanScreen() {
     () => items.reduce((sum, i) => sum + i.durationMin, 0),
     [items],
   );
+
+  // Rain-proof: swap outdoor stops out of wet hours for indoor stops sitting in dry ones.
+  const loadWeather = useWeatherStore((s) => s.load);
+  const weatherData = useWeatherStore((s) => s.data);
+  useEffect(() => {
+    if (prefs.destination) loadWeather(prefs.destination, prefs.durationDays);
+  }, [prefs.destination, prefs.durationDays, loadWeather]);
+
+  const wetHours = useMemo(() => {
+    if (!weatherData || !prefs.startDate) return null;
+    return wetHoursForDate(weatherData.hourly, dateForDay(prefs.startDate, dayNumber));
+  }, [weatherData, prefs.startDate, dayNumber]);
+
+  const rainProofPlan = useMemo(
+    () => (wetHours && wetHours.size > 0 ? rainProofReorder(items, wetHours) : null),
+    [items, wetHours],
+  );
+  const showRainProof = !!wetHours && wetHours.size > 0;
+
+  const [toast, setToast] = useState<string | null>(null);
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 2500);
+    return () => clearTimeout(t);
+  }, [toast]);
+
+  const onRainProof = () => {
+    if (!rainProofPlan) {
+      setToast('Already rain-optimized.');
+      return;
+    }
+    reorderDayItems(dayNumber, rainProofPlan);
+    setToast('Moved outdoor stops to drier hours.');
+  };
 
   // Plottable stops in plan order — numbering + the polyline both derive from this.
   const points = useMemo(
@@ -151,6 +187,26 @@ export function MyPlanScreen() {
               Map
             </AppText>
           </TouchableOpacity>
+        </View>
+      )}
+
+      {!generating && items.length > 0 && showRainProof && (
+        <View style={styles.rainProofWrap}>
+          <Button
+            variant="secondary"
+            icon={CloudRain}
+            label={rainProofPlan ? 'Rain-proof this day' : 'Already rain-optimized'}
+            onPress={onRainProof}
+            disabled={!rainProofPlan}
+            style={styles.rainProofBtn}
+          />
+          {toast && (
+            <View style={styles.toast}>
+              <AppText variant="caption" style={styles.toastText}>
+                {toast}
+              </AppText>
+            </View>
+          )}
         </View>
       )}
 
@@ -351,6 +407,20 @@ const styles = StyleSheet.create({
   segmentActive: { backgroundColor: colors.white, ...shadows.card },
   segmentText: { fontFamily: fonts.interMedium, fontSize: 14, color: colors.textSecondary },
   segmentTextActive: { color: colors.primary },
+  rainProofWrap: {
+    marginHorizontal: SCREEN_PADDING,
+    marginBottom: spacing.base,
+    gap: spacing.sm,
+  },
+  rainProofBtn: { height: 44 },
+  toast: {
+    alignSelf: 'center',
+    backgroundColor: colors.textPrimary,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.base,
+    paddingVertical: spacing.xs,
+  },
+  toastText: { color: colors.white },
   mapWrap: {
     flex: 1,
     marginHorizontal: SCREEN_PADDING,

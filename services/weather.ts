@@ -57,14 +57,22 @@ export async function geocodeCity(name: string): Promise<{ latitude: number; lon
   return coords;
 }
 
-/** Fetches current + hourly + today's rain chance for a coordinate. */
-export async function fetchWeather(latitude: number, longitude: number): Promise<WeatherData> {
+const MAX_FORECAST_DAYS = 16; // Open-Meteo's free-tier hourly ceiling
+
+/** Fetches current + hourly + today's rain chance for a coordinate.
+ *  `days` should cover the trip length so later days aren't left un-forecast. */
+export async function fetchWeather(
+  latitude: number,
+  longitude: number,
+  days: number = 3,
+): Promise<WeatherData> {
+  const forecastDays = Math.min(MAX_FORECAST_DAYS, Math.max(3, days));
   const url =
     `${FORECAST_URL}?latitude=${latitude}&longitude=${longitude}` +
     `&current=temperature_2m,weather_code,precipitation` +
     `&hourly=precipitation_probability,weather_code,temperature_2m` +
     `&daily=weather_code,temperature_2m_max,precipitation_probability_max` +
-    `&timezone=auto&forecast_days=3`;
+    `&timezone=auto&forecast_days=${forecastDays}`;
   const data = await fetchJSON(url);
 
   const current = data?.current;
