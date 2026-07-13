@@ -23,6 +23,7 @@ import { CATEGORY_META } from '@/utils/categories';
 import { to12h, formatDuration } from '@/utils/time';
 import { getItemCoords } from '@/utils/coords';
 import { dateForDay, wetHoursForDate, rainProofReorder, hourOf } from '@/utils/rainProof';
+import { fetchRoute, type Coords } from '@/services/routing';
 import type { ItineraryItem } from '@/types';
 
 type PlanView = 'list' | 'map';
@@ -102,6 +103,22 @@ export function MyPlanScreen() {
   const coords = useMemo(() => points.map((p) => p.coord), [points]);
 
   const mapRef = useRef<MapView>(null);
+
+  // Road-following polyline via OSRM; falls back to the straight line through `coords`
+  // (set below) while it loads or if the free demo server errors/times out.
+  const [routeCoords, setRouteCoords] = useState<Coords[] | null>(null);
+  useEffect(() => {
+    setRouteCoords(null);
+    if (view !== 'map' || coords.length < 2) return;
+    let cancelled = false;
+    fetchRoute(coords).then((result) => {
+      if (!cancelled) setRouteCoords(result);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [view, dayNumber, coords]);
+
   useEffect(() => {
     if (view !== 'map') return;
     if (coords.length === 1) {
@@ -255,7 +272,7 @@ export function MyPlanScreen() {
               }}
             >
               {coords.length > 1 && (
-                <Polyline coordinates={coords} strokeColor={colors.primary} strokeWidth={4} />
+                <Polyline coordinates={routeCoords ?? coords} strokeColor={colors.primary} strokeWidth={4} />
               )}
               {points.map((p, i) => (
                 <Marker
