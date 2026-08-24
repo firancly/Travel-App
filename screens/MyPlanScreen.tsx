@@ -413,7 +413,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
   },
   dayPillActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  dayText: { fontFamily: fonts.interMedium, fontSize: 14, color: colors.textSecondary },
+  dayText: { fontWeight: "500", fontSize: 14, color: colors.textSecondary },
   dayTextActive: { color: colors.white },
   segmentRow: {
     flexDirection: 'row',
@@ -430,7 +430,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
   },
   segmentActive: { backgroundColor: colors.white, ...shadows.card },
-  segmentText: { fontFamily: fonts.interMedium, fontSize: 14, color: colors.textSecondary },
+  segmentText: { fontWeight: "500", fontSize: 14, color: colors.textSecondary },
   segmentTextActive: { color: colors.primary },
   rainProofWrap: {
     marginHorizontal: SCREEN_PADDING,
@@ -464,11 +464,11 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   summaryItem: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  summaryText: { color: colors.textPrimary, fontFamily: fonts.interSemiBold },
+  summaryText: { color: colors.textPrimary, fontWeight: "600" },
   hintRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   rowWrap: { flexDirection: 'row', marginBottom: spacing.md },
   timeCol: { width: 56, alignItems: 'center' },
-  time: { fontFamily: fonts.jakartaSemiBold, fontSize: 12, color: colors.primary },
+  time: { fontWeight: "600", fontSize: 12, color: colors.primary },
   wetBadge: { marginTop: spacing.xs },
   timeline: {
     flex: 1,
@@ -506,6 +506,6 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: radius.pill,
   },
-  swapText: { fontFamily: fonts.interSemiBold, fontSize: 12, color: colors.primary },
+  swapText: { fontWeight: "600", fontSize: 12, color: colors.primary },
   grip: { justifyContent: 'center', paddingLeft: spacing.xs },
 });

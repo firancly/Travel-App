@@ -43,7 +43,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   text: {
-    fontFamily: fonts.interMedium,
+    fontWeight: "500",
     fontSize: 13,
   },
 });

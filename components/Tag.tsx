@@ -33,7 +33,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   text: {
-    fontFamily: fonts.interMedium,
+    fontWeight: "500",
     fontSize: 11,
     letterSpacing: 0.5,
     textTransform: 'uppercase',

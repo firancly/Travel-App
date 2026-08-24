@@ -30,7 +30,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   action: {
-    fontFamily: fonts.interSemiBold,
+    fontWeight: "600",
     fontSize: 13,
     color: colors.primary,
   },

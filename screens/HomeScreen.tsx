@@ -261,7 +261,7 @@ const styles = StyleSheet.create({
   },
   greetingText: { flex: 1, gap: spacing.xs },
   hello: { color: colors.textSecondary },
-  status: { color: colors.primary, fontFamily: fonts.interSemiBold },
+  status: { color: colors.primary, fontWeight: "600" },
   avatarBtn: {
     width: 44,
     height: 44,
@@ -303,7 +303,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   weatherCtaText: {
-    fontFamily: fonts.interSemiBold,
+    fontWeight: "600",
     fontSize: 13,
     color: colors.primary,
   },
@@ -312,7 +312,7 @@ const styles = StyleSheet.create({
   todayRow: { flexDirection: "row", alignItems: "center", gap: spacing.md },
   timeCol: { width: 56 },
   time: {
-    fontFamily: fonts.jakartaSemiBold,
+    fontWeight: "600",
     fontSize: 13,
     color: colors.primary,
   },

@@ -1,66 +1,76 @@
 import { TextStyle } from 'react-native';
-import { fonts } from './fonts';
 import { colors } from './colors';
 
 /**
- * Typography scale (design spec).
- * Headings: Plus Jakarta Sans · Body: Inter.
+ * Typography scale ported from the TourNet AI design system.
+ * System sans (no custom families) — weight via fontWeight.
+ * Colors kept on the app's green/white palette.
  */
 export const typography = {
+  // display-md
   screenTitle: {
-    fontFamily: fonts.jakartaBold,
-    fontSize: 28,
-    lineHeight: 34,
+    fontSize: 26,
+    lineHeight: 32,
+    fontWeight: '800',
+    letterSpacing: -0.3,
     color: colors.textPrimary,
   },
+  // h2
   sectionHeader: {
-    fontFamily: fonts.jakartaBold,
-    fontSize: 20,
-    lineHeight: 26,
+    fontSize: 18,
+    lineHeight: 24,
+    fontWeight: '700',
     color: colors.textPrimary,
   },
+  // h3
   cardTitle: {
-    fontFamily: fonts.jakartaSemiBold,
     fontSize: 16,
     lineHeight: 22,
+    fontWeight: '600',
     color: colors.textPrimary,
   },
+  // body-md
   body: {
-    fontFamily: fonts.interRegular,
     fontSize: 14,
     lineHeight: 20,
+    fontWeight: '400',
     color: colors.body,
   },
+  // label-lg
   bodyStrong: {
-    fontFamily: fonts.interSemiBold,
     fontSize: 14,
     lineHeight: 20,
+    fontWeight: '600',
     color: colors.textPrimary,
   },
+  // label-sm (uppercase eyebrow)
   label: {
-    fontFamily: fonts.interMedium,
     fontSize: 11,
     lineHeight: 14,
+    fontWeight: '500',
     letterSpacing: 0.5,
     textTransform: 'uppercase',
     color: colors.textSecondary,
   },
+  // caption
   caption: {
-    fontFamily: fonts.interRegular,
-    fontSize: 12,
-    lineHeight: 16,
+    fontSize: 11,
+    lineHeight: 14,
+    fontWeight: '400',
     color: colors.textMuted,
   },
+  // display-lg
   stat: {
-    fontFamily: fonts.jakartaBold,
-    fontSize: 36,
-    lineHeight: 40,
+    fontSize: 32,
+    lineHeight: 38,
+    fontWeight: '800',
     color: colors.primary,
   },
+  // label-lg on buttons
   button: {
-    fontFamily: fonts.jakartaSemiBold,
-    fontSize: 16,
+    fontSize: 15,
     lineHeight: 20,
+    fontWeight: '600',
     color: colors.white,
   },
 } satisfies Record<string, TextStyle>;

@@ -80,7 +80,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
   },
   value: {
-    fontFamily: fonts.interMedium,
+    fontWeight: "500",
     fontSize: 15,
     color: colors.textPrimary,
   },

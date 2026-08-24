@@ -96,7 +96,7 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
   },
   label: {
-    fontFamily: fonts.interMedium,
+    fontWeight: "500",
     fontSize: 11,
   },
 });

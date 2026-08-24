@@ -317,7 +317,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  brand: { fontFamily: fonts.jakartaBold, fontSize: 16, color: colors.textPrimary },
+  brand: { fontWeight: "700", fontSize: 16, color: colors.textPrimary },
   progress: { flexDirection: 'row', gap: spacing.sm },
   progressSeg: {
     flex: 1,
@@ -369,7 +369,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
   },
   durationPillActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  durationText: { fontFamily: fonts.interMedium, fontSize: 14, color: colors.textSecondary },
+  durationText: { fontWeight: "500", fontSize: 14, color: colors.textSecondary },
   durationTextActive: { color: colors.white },
   inputWrap: {
     flexDirection: 'row',
@@ -382,7 +382,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     backgroundColor: colors.white,
   },
-  input: { flex: 1, fontFamily: fonts.interMedium, fontSize: 15, color: colors.textPrimary },
+  input: { flex: 1, fontWeight: "500", fontSize: 15, color: colors.textPrimary },
   hintRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.md },
   hint: { color: colors.primary },
   reviewCard: {

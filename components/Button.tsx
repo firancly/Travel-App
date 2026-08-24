@@ -109,11 +109,11 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   label: {
-    fontFamily: fonts.jakartaSemiBold,
+    fontWeight: "600",
     fontSize: 16,
   },
   pillText: {
-    fontFamily: fonts.interSemiBold,
+    fontWeight: "600",
     fontSize: 13,
     color: colors.primary,
   },

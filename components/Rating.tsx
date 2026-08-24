@@ -28,12 +28,12 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   value: {
-    fontFamily: fonts.interSemiBold,
+    fontWeight: "600",
     fontSize: 13,
     color: colors.textPrimary,
   },
   reviews: {
-    fontFamily: fonts.interRegular,
+    fontWeight: "400",
     fontSize: 12,
     color: colors.textMuted,
   },

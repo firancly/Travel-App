@@ -35,7 +35,7 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   text: {
-    fontFamily: fonts.interSemiBold,
+    fontWeight: "600",
     fontSize: 12,
   },
 });

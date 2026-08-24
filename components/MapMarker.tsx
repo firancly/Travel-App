@@ -65,13 +65,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
   },
   number: {
-    fontFamily: fonts.interSemiBold,
+    fontWeight: "600",
     fontSize: 11,
     lineHeight: 13,
     color: colors.white,
   },
   selectedNumber: {
-    fontFamily: fonts.interSemiBold,
+    fontWeight: "600",
     fontSize: 13,
     lineHeight: 15,
     color: colors.primary,

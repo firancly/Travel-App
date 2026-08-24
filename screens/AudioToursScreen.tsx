@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
   },
-  price: { fontFamily: fonts.jakartaBold, fontSize: 15, color: colors.primary },
+  price: { fontWeight: "700", fontSize: 15, color: colors.primary },
   desc: { color: colors.body, marginTop: spacing.md },
   metaRow: { flexDirection: 'row', gap: spacing.lg, marginTop: spacing.md },
   meta: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
@@ -112,5 +112,5 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     marginTop: spacing.base,
   },
-  playText: { fontFamily: fonts.jakartaSemiBold, fontSize: 14, color: colors.white },
+  playText: { fontWeight: "600", fontSize: 14, color: colors.white },
 });

@@ -5,18 +5,16 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { Stack } from 'expo-router';
-import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
-import { fontAssets, colors } from '@/theme';
+import { colors } from '@/theme';
 import { usePrefsStore } from '@/store/usePrefsStore';
 
-// Keep the native splash up until fonts + persisted state are ready.
+// Keep the native splash up until persisted state is ready (system font — no font loading).
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-  const [fontsLoaded, fontError] = useFonts(fontAssets);
   const hydrated = usePrefsStore((s) => s._hydrated);
-  const ready = (fontsLoaded || !!fontError) && hydrated;
+  const ready = hydrated;
 
   const onLayoutRoot = useCallback(async () => {
     if (ready) await SplashScreen.hideAsync();

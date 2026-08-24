@@ -1,22 +1,23 @@
 import { Platform } from 'react-native';
 import { colors } from './colors';
 
-/** Card shadow per spec: opacity 0.06, radius 12, elevation 3. */
+// Elevation scale from the TourNet AI design system (neutral black on the green palette).
 export const shadows = {
+  // --shadow-card: 0 2px 8px /0.06
   card: {
     shadowColor: '#000',
     shadowOpacity: 0.06,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
-  // Slightly stronger lift for floating elements (FABs, sheets, pins).
+  // --shadow-pop: 0 8px 24px /0.12 — floating elements (FABs, sheets, pins).
   floating: {
     shadowColor: '#000',
     shadowOpacity: 0.12,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 8,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 10,
   },
 } as const;
 

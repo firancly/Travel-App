@@ -189,6 +189,6 @@ const styles = StyleSheet.create({
     marginTop: spacing.xl,
     paddingVertical: spacing.base,
   },
-  resetText: { fontFamily: fonts.interSemiBold, fontSize: 14, color: colors.alert },
+  resetText: { fontWeight: "600", fontSize: 14, color: colors.alert },
   version: { marginTop: spacing.md },
 });

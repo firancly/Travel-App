@@ -19,12 +19,14 @@ export const SCREEN_PADDING = spacing.lg; // 20
 /** Standard gap between stacked cards (never let two cards touch). */
 export const CARD_GAP = spacing.md; // 12
 
+// Radius scale from the TourNet AI design system.
 export const radius = {
-  sm: 8, // tag backgrounds, small buttons
+  sm: 6, // tags, small chips
   md: 10, // feature icon container
-  lg: 12, // primary buttons
-  xl: 16, // cards
-  pill: 999,
+  lg: 14, // buttons
+  xl: 20, // cards
+  xxl: 28, // sheets, large surfaces
+  pill: 9999,
 } as const;
 
 export type Spacing = keyof typeof spacing;
