@@ -13,9 +13,28 @@ import DraggableFlatList, {
 } from 'react-native-draggable-flatlist';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useRouter } from 'expo-router';
-import { GripVertical, RefreshCw, Clock, CalendarPlus, MapPin, CloudRain } from 'lucide-react-native';
-import { ScreenHeader, AppText, Button, FeatureIcon, EmptyState, SkeletonCard, MapMarker } from '@/components';
-import { colors, spacing, radius, fonts, shadows, hairline, mutedMapStyle, SCREEN_PADDING } from '@/theme';
+import {
+  GripVertical,
+  Clock,
+  CalendarPlus,
+  MapPin,
+  CloudRain,
+  Sparkles,
+  ArrowLeftRight,
+  Trash2,
+} from 'lucide-react-native';
+import {
+  ScreenHeader,
+  AppText,
+  Button,
+  Card,
+  Tag,
+  FeatureIcon,
+  EmptyState,
+  SkeletonCard,
+  MapMarker,
+} from '@/components';
+import { colors, spacing, radius, shadows, mutedMapStyle, SCREEN_PADDING } from '@/theme';
 import { usePlanStore } from '@/store/usePlanStore';
 import { usePrefsStore } from '@/store/usePrefsStore';
 import { useWeatherStore } from '@/store/useWeatherStore';
@@ -28,11 +47,16 @@ import type { ItineraryItem } from '@/types';
 
 type PlanView = 'list' | 'map';
 
+// Amber warning tint, matching StatusBadge's "Pending" pair.
+const WET_BG = '#FFF3DF';
+const WET_FG = '#B7791F';
+
 export function MyPlanScreen() {
   const router = useRouter();
   const days = usePlanStore((s) => s.days);
   const reorderDayItems = usePlanStore((s) => s.reorderDayItems);
   const smartSwap = usePlanStore((s) => s.smartSwap);
+  const removeItem = usePlanStore((s) => s.removeItem);
   const generatePlan = usePlanStore((s) => s.generatePlan);
   const generating = usePlanStore((s) => s.generating);
   const prefs = usePrefsStore();
@@ -145,28 +169,40 @@ export function MyPlanScreen() {
     }
   }, [view, dayNumber, coords]);
 
-  const renderItem = ({ item, drag, isActive }: RenderItemParams<ItineraryItem>) => (
-    <ScaleDecorator activeScale={1.03}>
-      <PlanRow
-        item={item}
-        drag={drag}
-        isActive={isActive}
-        isWet={!!wetHours && wetHours.has(hourOf(item.time))}
-        onSwap={() => smartSwap(dayNumber, item.id)}
-      />
-    </ScaleDecorator>
-  );
+  const renderItem = ({ item, drag, isActive, getIndex }: RenderItemParams<ItineraryItem>) => {
+    const idx = getIndex();
+    return (
+      <ScaleDecorator activeScale={1.03}>
+        <PlanRow
+          item={item}
+          drag={drag}
+          isActive={isActive}
+          last={idx === items.length - 1}
+          isWet={!!wetHours && wetHours.has(hourOf(item.time))}
+          onSwap={() => smartSwap(dayNumber, item.id)}
+          onRemove={() => removeItem(dayNumber, item.id)}
+        />
+      </ScaleDecorator>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScreenHeader
         title="My Plan"
         subtitle={day?.label}
-        rightIcon={RefreshCw}
-        onRightPress={regenerate}
+        right={
+          <Button
+            variant="pill"
+            icon={Sparkles}
+            label={generating ? 'Rebuilding…' : 'Rebuild'}
+            onPress={regenerate}
+            disabled={generating}
+          />
+        }
       />
 
-      {/* Day selector */}
+      {/* Day selector — label over stop count, per the design's day pills. */}
       <View style={styles.dayRow}>
         {days.map((d) => {
           const active = d.day === dayNumber;
@@ -179,6 +215,9 @@ export function MyPlanScreen() {
             >
               <AppText style={[styles.dayText, active && styles.dayTextActive]}>
                 Day {d.day}
+              </AppText>
+              <AppText style={[styles.daySub, active && styles.daySubActive]}>
+                {d.items.length} stops
               </AppText>
             </TouchableOpacity>
           );
@@ -218,13 +257,6 @@ export function MyPlanScreen() {
             disabled={!rainProofPlan}
             style={styles.rainProofBtn}
           />
-          {toast && (
-            <View style={styles.toast}>
-              <AppText variant="caption" style={styles.toastText}>
-                {toast}
-              </AppText>
-            </View>
-          )}
         </View>
       )}
 
@@ -298,19 +330,35 @@ export function MyPlanScreen() {
           ListHeaderComponent={
             <View style={styles.summary}>
               <View style={styles.summaryItem}>
-                <Clock size={15} color={colors.primary} />
-                <AppText variant="body" style={styles.summaryText}>
-                  {items.length} stops - {formatDuration(totalMin)}
+                <Clock size={14} color={colors.primary} strokeWidth={2.2} />
+                <AppText style={styles.summaryText}>
+                  {items.length} stops · {formatDuration(totalMin)}
                 </AppText>
               </View>
               <View style={styles.hintRow}>
-                <GripVertical size={14} color={colors.grip} />
+                <ArrowLeftRight size={13} color={colors.textMuted} />
                 <AppText variant="caption">Hold to reorder</AppText>
               </View>
             </View>
           }
+          ListFooterComponent={
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => router.push('/discover')}
+              style={styles.addStop}
+            >
+              <Sparkles size={16} color={colors.primary} strokeWidth={2.2} />
+              <AppText style={styles.addStopText}>Add a stop for this day</AppText>
+            </TouchableOpacity>
+          }
         />
       )}
+
+      {toast ? (
+        <View style={styles.toast} pointerEvents="none">
+          <AppText style={styles.toastText}>{toast}</AppText>
+        </View>
+      ) : null}
     </SafeAreaView>
   );
 }
@@ -319,14 +367,18 @@ function PlanRow({
   item,
   drag,
   isActive,
+  last,
   isWet,
   onSwap,
+  onRemove,
 }: {
   item: ItineraryItem;
   drag: () => void;
   isActive: boolean;
+  last: boolean;
   isWet: boolean;
   onSwap: () => Promise<void>;
+  onRemove: () => void;
 }) {
   const meta = CATEGORY_META[item.category];
   const [swapping, setSwapping] = useState(false);
@@ -342,55 +394,61 @@ function PlanRow({
     <View style={styles.rowWrap}>
       <View style={styles.timeCol}>
         <AppText style={styles.time}>{to12h(item.time)}</AppText>
-        {isWet && (
-          <View style={styles.wetBadge}>
-            <CloudRain size={11} color={colors.alert} strokeWidth={2.4} />
-          </View>
-        )}
-        <View style={styles.timeline} />
+        <AppText style={styles.dur}>{formatDuration(item.durationMin)}</AppText>
+        {last ? null : <View style={styles.rail} />}
       </View>
 
-      <View style={[styles.card, isActive && styles.cardActive]}>
-        <FeatureIcon icon={meta.icon} />
-        <View style={styles.cardBody}>
-          <AppText variant="cardTitle" numberOfLines={1}>
-            {item.title}
-          </AppText>
-          <AppText variant="body" numberOfLines={2} style={styles.desc}>
-            {item.description}
-          </AppText>
-          <View style={styles.cardFooter}>
-            <View style={styles.metaRow}>
-              <Clock size={13} color={colors.textMuted} />
-              <AppText variant="caption">{formatDuration(item.durationMin)}</AppText>
-            </View>
-            <TouchableOpacity
-              activeOpacity={0.8}
-              style={styles.swapBtn}
-              onPress={handleSwap}
-              disabled={swapping}
-            >
-              {swapping ? (
-                <ActivityIndicator size="small" color={colors.primary} />
-              ) : (
-                <RefreshCw size={14} color={colors.primary} strokeWidth={2.2} />
-              )}
-              <AppText style={styles.swapText}>
-                {swapping ? 'Swapping…' : 'Smart swap'}
-              </AppText>
-            </TouchableOpacity>
+      <Card style={[styles.card, isActive && styles.cardActive]}>
+        <View style={styles.cardTop}>
+          <FeatureIcon icon={meta.icon} />
+          <View style={styles.cardBody}>
+            <AppText variant="cardTitle" style={styles.cardTitle} numberOfLines={1}>
+              {item.title}
+            </AppText>
+            <AppText style={styles.desc} numberOfLines={2}>
+              {item.description}
+            </AppText>
           </View>
+          <TouchableOpacity
+            onLongPress={drag}
+            delayLongPress={120}
+            style={styles.grip}
+            hitSlop={8}
+          >
+            <GripVertical size={18} color={colors.grip} />
+          </TouchableOpacity>
         </View>
 
-        <TouchableOpacity
-          onLongPress={drag}
-          delayLongPress={120}
-          style={styles.grip}
-          hitSlop={8}
-        >
-          <GripVertical size={20} color={colors.grip} />
-        </TouchableOpacity>
-      </View>
+        <View style={styles.badgeRow}>
+          <Tag label={meta.label} icon={meta.icon} />
+          {isWet ? (
+            <Tag label="Wet hour" icon={CloudRain} background={WET_BG} color={WET_FG} />
+          ) : null}
+        </View>
+
+        <View style={styles.cardFooter}>
+          <TouchableOpacity
+            activeOpacity={0.8}
+            style={styles.footerBtn}
+            onPress={handleSwap}
+            disabled={swapping}
+          >
+            {swapping ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : (
+              <ArrowLeftRight size={14} color={colors.primary} strokeWidth={2.2} />
+            )}
+            <AppText style={styles.swapText}>
+              {swapping ? 'Swapping…' : 'Try somewhere else'}
+            </AppText>
+          </TouchableOpacity>
+          <View style={styles.flex} />
+          <TouchableOpacity activeOpacity={0.8} style={styles.footerBtn} onPress={onRemove}>
+            <Trash2 size={14} color={colors.textMuted} strokeWidth={2.2} />
+            <AppText style={styles.removeText}>Remove</AppText>
+          </TouchableOpacity>
+        </View>
+      </Card>
     </View>
   );
 }
@@ -398,6 +456,8 @@ function PlanRow({
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.screen },
   flex: { flex: 1 },
+
+  // Day pills
   dayRow: {
     flexDirection: 'row',
     gap: spacing.sm,
@@ -405,16 +465,22 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.base,
   },
   dayPill: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.pill,
+    flex: 1,
+    alignItems: 'center',
+    gap: 2,
+    paddingVertical: spacing.md,
+    borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.white,
   },
   dayPillActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  dayText: { fontWeight: "500", fontSize: 14, color: colors.textSecondary },
+  dayText: { fontWeight: '600', fontSize: 13, color: colors.textSecondary },
   dayTextActive: { color: colors.white },
+  daySub: { fontSize: 10.5, lineHeight: 14, color: colors.textMuted },
+  daySubActive: { color: 'rgba(255,255,255,0.75)' },
+
+  // List / map toggle
   segmentRow: {
     flexDirection: 'row',
     marginHorizontal: SCREEN_PADDING,
@@ -430,22 +496,28 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
   },
   segmentActive: { backgroundColor: colors.white, ...shadows.card },
-  segmentText: { fontWeight: "500", fontSize: 14, color: colors.textSecondary },
+  segmentText: { fontWeight: '500', fontSize: 14, color: colors.textSecondary },
   segmentTextActive: { color: colors.primary },
+
   rainProofWrap: {
     marginHorizontal: SCREEN_PADDING,
     marginBottom: spacing.base,
-    gap: spacing.sm,
   },
   rainProofBtn: { height: 44 },
+
+  // Toast
   toast: {
-    alignSelf: 'center',
+    position: 'absolute',
+    left: SCREEN_PADDING,
+    right: SCREEN_PADDING,
+    bottom: spacing.xl,
     backgroundColor: colors.textPrimary,
-    borderRadius: radius.pill,
+    borderRadius: radius.md,
     paddingHorizontal: spacing.base,
-    paddingVertical: spacing.xs,
+    paddingVertical: spacing.md,
   },
-  toastText: { color: colors.white },
+  toastText: { fontSize: 13, fontWeight: '500', color: colors.white },
+
   mapWrap: {
     flex: 1,
     marginHorizontal: SCREEN_PADDING,
@@ -455,57 +527,70 @@ const styles = StyleSheet.create({
     backgroundColor: colors.mint,
   },
   webFallback: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.lg },
+
   listContent: { paddingHorizontal: SCREEN_PADDING, paddingBottom: spacing.xxl },
   skeletonWrap: { paddingHorizontal: SCREEN_PADDING, gap: spacing.md },
+
+  // Summary bar
   summary: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: spacing.md,
+    gap: spacing.md,
+    backgroundColor: colors.mint,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.base,
+    paddingVertical: spacing.md,
+    marginBottom: spacing.base,
   },
   summaryItem: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  summaryText: { color: colors.textPrimary, fontWeight: "600" },
+  summaryText: { fontSize: 12.5, fontWeight: '600', color: colors.textPrimary },
   hintRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  rowWrap: { flexDirection: 'row', marginBottom: spacing.md },
-  timeCol: { width: 56, alignItems: 'center' },
-  time: { fontWeight: "600", fontSize: 12, color: colors.primary },
-  wetBadge: { marginTop: spacing.xs },
-  timeline: {
+
+  // Stop rows
+  rowWrap: { flexDirection: 'row', gap: spacing.md, paddingBottom: spacing.md },
+  timeCol: { width: 52, alignItems: 'center', gap: spacing.xs, paddingTop: spacing.base },
+  time: { fontSize: 12, lineHeight: 15, fontWeight: '700', color: colors.primary },
+  dur: { fontSize: 10.5, lineHeight: 13, color: colors.textMuted },
+  rail: {
     flex: 1,
     width: 2,
-    backgroundColor: colors.mintDeep,
-    marginTop: spacing.sm,
     borderRadius: 1,
+    backgroundColor: colors.border,
+    marginTop: spacing.xs,
   },
-  card: {
-    flex: 1,
-    flexDirection: 'row',
-    gap: spacing.md,
-    backgroundColor: colors.white,
-    borderRadius: radius.xl,
-    padding: spacing.base,
-    ...shadows.card,
-    ...hairline,
-  },
+  card: { flex: 1, borderRadius: radius.lg, gap: spacing.sm },
   cardActive: { borderColor: colors.primary },
+  cardTop: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
   cardBody: { flex: 1, gap: spacing.xs },
-  desc: { color: colors.body },
+  cardTitle: { fontWeight: '700', fontSize: 15, lineHeight: 20 },
+  desc: { fontSize: 12.5, lineHeight: 18, color: colors.textSecondary },
+  grip: { paddingLeft: spacing.xs, paddingTop: 2 },
+  badgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
   cardFooter: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: spacing.xs,
+    borderTopWidth: 1,
+    borderTopColor: colors.divider,
+    paddingTop: spacing.sm,
   },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  swapBtn: {
+  footerBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  swapText: { fontWeight: '600', fontSize: 12, color: colors.primary },
+  removeText: { fontWeight: '600', fontSize: 12, color: colors.textMuted },
+
+  // Add-stop
+  addStop: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
-    backgroundColor: colors.mint,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 6,
-    borderRadius: radius.pill,
+    justifyContent: 'center',
+    gap: spacing.sm,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: colors.mintDeep,
+    borderRadius: radius.lg,
+    backgroundColor: colors.white,
+    paddingVertical: spacing.base,
+    marginTop: spacing.xs,
   },
-  swapText: { fontWeight: "600", fontSize: 12, color: colors.primary },
-  grip: { justifyContent: 'center', paddingLeft: spacing.xs },
+  addStopText: { fontWeight: '600', fontSize: 13.5, color: colors.primary },
 });

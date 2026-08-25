@@ -10,9 +10,17 @@ interface ScreenHeaderProps {
   /** Optional icon button on the right of the header. */
   rightIcon?: LucideIcon;
   onRightPress?: () => void;
+  /** Custom right-hand slot (e.g. a labelled button); wins over `rightIcon`. */
+  right?: React.ReactNode;
 }
 
-export function ScreenHeader({ title, subtitle, rightIcon: RightIcon, onRightPress }: ScreenHeaderProps) {
+export function ScreenHeader({
+  title,
+  subtitle,
+  rightIcon: RightIcon,
+  onRightPress,
+  right,
+}: ScreenHeaderProps) {
   return (
     <View style={styles.container}>
       <View style={styles.titleWrap}>
@@ -23,7 +31,9 @@ export function ScreenHeader({ title, subtitle, rightIcon: RightIcon, onRightPre
           </AppText>
         ) : null}
       </View>
-      {RightIcon ? (
+      {right ? (
+        <View style={styles.rightSlot}>{right}</View>
+      ) : RightIcon ? (
         <TouchableOpacity activeOpacity={0.8} onPress={onRightPress} style={styles.iconBtn}>
           <RightIcon size={20} color={colors.primary} strokeWidth={2.2} />
         </TouchableOpacity>
@@ -47,6 +57,9 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     color: colors.textSecondary,
+  },
+  rightSlot: {
+    marginLeft: spacing.md,
   },
   iconBtn: {
     width: 40,
