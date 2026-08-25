@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -9,32 +9,40 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
+  Easing,
+} from 'react-native-reanimated';
 import {
-  PiggyBank,
-  Wallet,
-  Gem,
   Landmark,
   Utensils,
   Mountain,
   Waves,
-  Check,
   Compass,
   MapPin,
+  Search,
+  Minus,
+  Plus,
+  Check,
+  X,
   Sparkles,
 } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
-import { AppText, Button, FeatureIcon } from '@/components';
+import { AppText, Button, Card, FilterChip } from '@/components';
 import { DateField } from '@/components/DateField';
-import { colors, spacing, radius, fonts, SCREEN_PADDING } from '@/theme';
+import { colors, spacing, radius, SCREEN_PADDING } from '@/theme';
 import { usePrefsStore } from '@/store/usePrefsStore';
 import { usePlanStore } from '@/store/usePlanStore';
 import type { BudgetRange, Interest } from '@/types';
-import { formatDateRange } from '@/utils/date';
+import { formatShortDate } from '@/utils/date';
 
-const BUDGETS: { key: BudgetRange; label: string; sub: string; icon: LucideIcon }[] = [
-  { key: 'budget', label: 'Budget', sub: 'Under $80 / day', icon: PiggyBank },
-  { key: 'mid', label: 'Mid-range', sub: '$80 - $200 / day', icon: Wallet },
-  { key: 'luxury', label: 'Luxury', sub: '$200+ / day', icon: Gem },
+const BUDGETS: { key: BudgetRange; label: string; range: string }[] = [
+  { key: 'budget', label: 'Budget', range: 'Under $80 / day' },
+  { key: 'mid', label: 'Mid-range', range: '$80 - $200 / day' },
+  { key: 'luxury', label: 'Luxury', range: '$200+ / day' },
 ];
 
 const INTERESTS: { key: Interest; label: string; icon: LucideIcon }[] = [
@@ -44,25 +52,47 @@ const INTERESTS: { key: Interest; label: string; icon: LucideIcon }[] = [
   { key: 'relaxation', label: 'Relaxation', icon: Waves },
 ];
 
-const DURATIONS = [2, 3, 5, 7, 10];
+const MIN_DAYS = 1;
+const MAX_DAYS = 14;
 
-const STEP_TITLES = ['Your travel style', 'Where & when', "You're all set"];
-const STEP_SUBTITLES = [
-  'Tell us how you like to travel so we can tune your plan.',
-  'Pick your destination and start date.',
-  'Review your trip and dive in.',
+const GEN_STEPS = [
+  'Reading your interests',
+  'Finding candidate stops',
+  'Grouping them by neighbourhood',
+  'Checking opening hours',
+  'Adding travel time between stops',
 ];
+const GEN_STEP_MS = 900;
+
+const MS_PER_DAY = 1000 * 60 * 60 * 24;
+
+/** "In 5 days" / "Today" / "Tomorrow" for the Arriving card. */
+function arrivalNote(iso: string | null): string {
+  if (!iso) return 'Pick a date';
+  const startOfDay = (d: Date) =>
+    new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const diff = Math.round(
+    (startOfDay(new Date(iso)) - startOfDay(new Date())) / MS_PER_DAY,
+  );
+  if (diff < 0) return 'In the past';
+  if (diff === 0) return 'Today';
+  if (diff === 1) return 'Tomorrow';
+  return `In ${diff} days`;
+}
+
+/** Country / region half of a "City, Country" string. */
+function destinationNote(destination: string): string {
+  const rest = destination.split(',').slice(1).join(',').trim();
+  return rest || 'Tap the field above to change it';
+}
 
 export function OnboardingScreen() {
-  const [step, setStep] = useState(0);
-
   const {
     budget,
     interests,
     durationDays,
     destination,
     startDate,
-    endDate,
     setBudget,
     toggleInterest,
     setDuration,
@@ -74,21 +104,17 @@ export function OnboardingScreen() {
   const generatePlan = usePlanStore((s) => s.generatePlan);
   const generating = usePlanStore((s) => s.generating);
 
-  const step0Valid = budget !== null && interests.length > 0 && durationDays > 0;
-  const step1Valid = destination.trim().length > 0 && !!startDate;
-  const canAdvance = step === 0 ? step0Valid : step === 1 ? step1Valid : true;
+  const canGenerate = destination.trim().length > 0 && !!startDate;
 
-  const onNext = async () => {
-    if (step < 2) {
-      setStep((s) => s + 1);
-      return;
-    }
-    // Final step: try to generate an AI plan (falls back to the sample plan on
-    // failure or when no proxy URL is configured), then enter the app.
+  const onGenerate = async () => {
+    if (!canGenerate || generating) return;
     await generatePlan({ destination, durationDays, budget, interests, startDate });
     completeOnboarding();
   };
-  const onBack = () => setStep((s) => Math.max(0, s - 1));
+
+  if (generating) return <GeneratingView />;
+
+  const selectedBudget = BUDGETS.find((b) => b.key === budget);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
@@ -96,322 +122,420 @@ export function OnboardingScreen() {
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        {/* Brand + progress */}
-        <View style={styles.header}>
-          <View style={styles.brandRow}>
-            <View style={styles.brandMark}>
-              <Compass size={18} color={colors.white} strokeWidth={2.4} />
-            </View>
-            <AppText style={styles.brand}>Navigate the Moment</AppText>
-          </View>
-          <View style={styles.progress}>
-            {[0, 1, 2].map((i) => (
-              <View
-                key={i}
-                style={[styles.progressSeg, i <= step && styles.progressSegActive]}
-              />
-            ))}
-          </View>
-          <AppText variant="label" style={styles.stepCount}>
-            Step {step + 1} of 3
-          </AppText>
-        </View>
-
         <ScrollView
           style={styles.flex}
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
+          <View style={styles.brandRow}>
+            <View style={styles.brandMark}>
+              <Compass size={16} color={colors.white} strokeWidth={2.4} />
+            </View>
+            <AppText variant="label">Navigate the Moment</AppText>
+          </View>
+
           <AppText variant="screenTitle" style={styles.title}>
-            {STEP_TITLES[step]}
+            Where are we going?
           </AppText>
-          <AppText variant="body" style={styles.subtitle}>
-            {STEP_SUBTITLES[step]}
+          <AppText style={styles.subtitle}>
+            Answer these once. We&apos;ll handle the rest of the trip.
           </AppText>
 
-          {step === 0 && (
-            <View style={styles.section}>
-              <AppText variant="label" style={styles.groupLabel}>
-                Budget range
-              </AppText>
-              <View style={styles.stack}>
-                {BUDGETS.map((b) => {
-                  const active = budget === b.key;
-                  return (
-                    <TouchableOpacity
-                      key={b.key}
-                      activeOpacity={0.85}
-                      onPress={() => setBudget(b.key)}
-                      style={[styles.optionRow, active && styles.optionActive]}
-                    >
-                      <FeatureIcon icon={b.icon} />
-                      <View style={styles.optionText}>
-                        <AppText variant="cardTitle">{b.label}</AppText>
-                        <AppText variant="body">{b.sub}</AppText>
-                      </View>
-                      {active ? <Check size={20} color={colors.primary} strokeWidth={2.6} /> : null}
-                    </TouchableOpacity>
-                  );
-                })}
+          {/* City */}
+          <AppText variant="label" style={styles.groupLabel}>
+            City
+          </AppText>
+          <View style={styles.inputWrap}>
+            <Search size={18} color={colors.textMuted} strokeWidth={2.2} />
+            <TextInput
+              value={destination}
+              onChangeText={setDestination}
+              placeholder="Search a city"
+              placeholderTextColor={colors.textMuted}
+              style={styles.input}
+              returnKeyType="done"
+            />
+          </View>
+          {destination.trim().length > 0 ? (
+            <View style={styles.picked}>
+              <View style={styles.pickedAvatar}>
+                <MapPin size={16} color={colors.white} strokeWidth={2.2} />
               </View>
-
-              <AppText variant="label" style={[styles.groupLabel, styles.groupSpacer]}>
-                Interests
-              </AppText>
-              <View style={styles.grid}>
-                {INTERESTS.map((it) => {
-                  const active = interests.includes(it.key);
-                  return (
-                    <TouchableOpacity
-                      key={it.key}
-                      activeOpacity={0.85}
-                      onPress={() => toggleInterest(it.key)}
-                      style={[styles.gridItem, active && styles.optionActive]}
-                    >
-                      <FeatureIcon
-                        icon={it.icon}
-                        background={active ? colors.primary : colors.mint}
-                        color={active ? colors.white : colors.primary}
-                      />
-                      <AppText variant="cardTitle" style={styles.gridLabel}>
-                        {it.label}
-                      </AppText>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-
-              <AppText variant="label" style={[styles.groupLabel, styles.groupSpacer]}>
-                Trip duration
-              </AppText>
-              <View style={styles.pillRow}>
-                {DURATIONS.map((d) => {
-                  const active = durationDays === d;
-                  return (
-                    <TouchableOpacity
-                      key={d}
-                      activeOpacity={0.85}
-                      onPress={() => setDuration(d)}
-                      style={[styles.durationPill, active && styles.durationPillActive]}
-                    >
-                      <AppText
-                        style={[styles.durationText, active && styles.durationTextActive]}
-                      >
-                        {d} days
-                      </AppText>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </View>
-          )}
-
-          {step === 1 && (
-            <View style={styles.section}>
-              <AppText variant="label" style={styles.groupLabel}>
-                Destination
-              </AppText>
-              <View style={styles.inputWrap}>
-                <MapPin size={20} color={colors.primary} strokeWidth={2} />
-                <TextInput
-                  value={destination}
-                  onChangeText={setDestination}
-                  placeholder="e.g. Kuala Lumpur, Malaysia"
-                  placeholderTextColor={colors.textMuted}
-                  style={styles.input}
-                  returnKeyType="done"
-                />
-              </View>
-
-              <AppText variant="label" style={[styles.groupLabel, styles.groupSpacer]}>
-                Start date
-              </AppText>
-              <DateField value={startDate} onChange={setStartDate} />
-
-              {startDate ? (
-                <View style={styles.hintRow}>
-                  <Sparkles size={16} color={colors.primary} />
-                  <AppText variant="body" style={styles.hint}>
-                    {durationDays}-day trip - {formatDateRange(startDate, endDate)}
-                  </AppText>
-                </View>
-              ) : null}
-            </View>
-          )}
-
-          {step === 2 && (
-            <View style={styles.section}>
-              <View style={styles.reviewCard}>
-                <ReviewRow label="Destination" value={destination || '-'} />
-                <ReviewRow label="Dates" value={formatDateRange(startDate, endDate)} />
-                <ReviewRow
-                  label="Budget"
-                  value={BUDGETS.find((b) => b.key === budget)?.label ?? '-'}
-                />
-                <ReviewRow label="Duration" value={`${durationDays} days`} />
-                <ReviewRow
-                  label="Interests"
-                  value={
-                    interests.length
-                      ? interests
-                          .map((i) => INTERESTS.find((x) => x.key === i)?.label)
-                          .join(', ')
-                      : '-'
-                  }
-                  last
-                />
-              </View>
-              <View style={styles.welcomeRow}>
-                <Sparkles size={18} color={colors.primary} />
-                <AppText variant="body" style={styles.welcome}>
-                  We curated recommendations, an itinerary and audio tours for your trip.
+              <View style={styles.pickedText}>
+                <AppText style={styles.pickedName} numberOfLines={1}>
+                  {destination.split(',')[0].trim()}
+                </AppText>
+                <AppText style={styles.pickedNote} numberOfLines={1}>
+                  {destinationNote(destination)}
                 </AppText>
               </View>
+              <TouchableOpacity
+                onPress={() => setDestination('')}
+                hitSlop={8}
+                style={styles.pickedClear}
+              >
+                <X size={16} color={colors.textMuted} strokeWidth={2.2} />
+              </TouchableOpacity>
             </View>
-          )}
-        </ScrollView>
-
-        <View style={styles.footer}>
-          {step > 0 ? (
-            <Button label="Back" variant="secondary" onPress={onBack} style={styles.backBtn} />
           ) : null}
+
+          {/* Days + arrival */}
+          <View style={styles.pairRow}>
+            <Card style={styles.pairCard}>
+              <AppText variant="label">Days</AppText>
+              <View style={styles.stepperRow}>
+                <StepperButton
+                  icon={Minus}
+                  disabled={durationDays <= MIN_DAYS}
+                  onPress={() => setDuration(Math.max(MIN_DAYS, durationDays - 1))}
+                />
+                <AppText style={styles.stepperValue}>{durationDays}</AppText>
+                <StepperButton
+                  icon={Plus}
+                  disabled={durationDays >= MAX_DAYS}
+                  onPress={() => setDuration(Math.min(MAX_DAYS, durationDays + 1))}
+                />
+              </View>
+            </Card>
+
+            <DateField
+              value={startDate}
+              onChange={setStartDate}
+              renderTrigger={(open) => (
+                <Card style={styles.pairCard} onPress={open}>
+                  <AppText variant="label">Arriving</AppText>
+                  <AppText style={styles.arriveDate}>
+                    {startDate ? formatShortDate(startDate) : 'Set date'}
+                  </AppText>
+                  <AppText style={styles.arriveNote}>{arrivalNote(startDate)}</AppText>
+                </Card>
+              )}
+            />
+          </View>
+
+          {/* Budget */}
+          <AppText variant="label" style={styles.groupLabel}>
+            Daily budget
+          </AppText>
+          <View style={styles.budgetRow}>
+            {BUDGETS.map((b) => {
+              const active = budget === b.key;
+              return (
+                <TouchableOpacity
+                  key={b.key}
+                  activeOpacity={0.85}
+                  onPress={() => setBudget(b.key)}
+                  style={[styles.budgetCard, active && styles.budgetCardActive]}
+                >
+                  <AppText style={[styles.budgetLabel, active && styles.budgetLabelActive]}>
+                    {b.label}
+                  </AppText>
+                  <AppText style={styles.budgetRange}>{b.range}</AppText>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+          <AppText style={styles.budgetTotal}>
+            {selectedBudget
+              ? `${selectedBudget.range} across ${durationDays} ${durationDays === 1 ? 'day' : 'days'}.`
+              : 'Pick a range so the plan matches your spending.'}
+          </AppText>
+
+          {/* Interests */}
+          <AppText variant="label" style={styles.groupLabel}>
+            What you&apos;re into
+          </AppText>
+          <View style={styles.chipRow}>
+            {INTERESTS.map((it) => (
+              <FilterChip
+                key={it.key}
+                label={it.label}
+                icon={it.icon}
+                selected={interests.includes(it.key)}
+                onPress={() => toggleInterest(it.key)}
+              />
+            ))}
+          </View>
+
           <Button
-            label={step === 2 ? (generating ? 'Building your plan...' : 'Start exploring') : 'Continue'}
-            onPress={onNext}
-            disabled={!canAdvance || generating}
-            loading={generating}
-            style={styles.nextBtn}
+            label="Plan with AI"
+            icon={Sparkles}
+            onPress={onGenerate}
+            disabled={!canGenerate}
+            style={styles.cta}
           />
-        </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
-function ReviewRow({ label, value, last }: { label: string; value: string; last?: boolean }) {
+function StepperButton({
+  icon: Icon,
+  onPress,
+  disabled,
+}: {
+  icon: LucideIcon;
+  onPress: () => void;
+  disabled?: boolean;
+}) {
   return (
-    <View style={[styles.reviewRow, !last && styles.reviewDivider]}>
-      <AppText variant="label">{label}</AppText>
-      <AppText variant="bodyStrong" style={styles.reviewValue}>
-        {value}
-      </AppText>
-    </View>
+    <TouchableOpacity
+      activeOpacity={0.8}
+      onPress={onPress}
+      disabled={disabled}
+      style={[styles.stepperBtn, disabled && styles.stepperBtnDisabled]}
+    >
+      <Icon size={16} color={colors.primary} strokeWidth={2.4} />
+    </TouchableOpacity>
+  );
+}
+
+/** Full-screen progress view shown while the AI proxy builds the itinerary. */
+function GeneratingView() {
+  const [step, setStep] = useState(0);
+
+  useEffect(() => {
+    const id = setInterval(
+      () => setStep((s) => Math.min(s + 1, GEN_STEPS.length - 1)),
+      GEN_STEP_MS,
+    );
+    return () => clearInterval(id);
+  }, []);
+
+  const ring = useSharedValue(0);
+  const pulse = useSharedValue(0);
+
+  useEffect(() => {
+    ring.value = withRepeat(
+      withTiming(1, { duration: 1900, easing: Easing.out(Easing.ease) }),
+      -1,
+      false,
+    );
+    pulse.value = withRepeat(
+      withTiming(1, { duration: 1600, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true,
+    );
+  }, [ring, pulse]);
+
+  const ringStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: 1 + ring.value * 0.5 }],
+    opacity: 0.5 * (1 - ring.value),
+  }));
+  const pulseStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: 1 + pulse.value * 0.07 }],
+  }));
+
+  return (
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      <View style={styles.genWrap}>
+        <View style={styles.genMarkWrap}>
+          <Animated.View style={[styles.genRing, ringStyle]} />
+          <Animated.View style={[styles.genMark, pulseStyle]}>
+            <MapPin size={32} color={colors.primary} strokeWidth={2} />
+          </Animated.View>
+        </View>
+
+        <View style={styles.genText}>
+          <AppText style={styles.genTitle} center>
+            Building your perfect day…
+          </AppText>
+          <AppText style={styles.genSub} center>
+            Sequencing stops so you never cross the city twice.
+          </AppText>
+        </View>
+
+        <View style={styles.genSteps}>
+          {GEN_STEPS.map((label, i) => {
+            const done = i < step;
+            const reached = i <= step;
+            return (
+              <View key={label} style={[styles.genStep, { opacity: reached ? 1 : 0.32 }]}>
+                <View style={[styles.genCheck, done && styles.genCheckDone]}>
+                  <Check
+                    size={12}
+                    color={done ? colors.white : colors.textMuted}
+                    strokeWidth={3}
+                  />
+                </View>
+                <AppText style={styles.genStepText}>{label}</AppText>
+              </View>
+            );
+          })}
+        </View>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.screen },
   flex: { flex: 1 },
-  header: {
+  content: {
     paddingHorizontal: SCREEN_PADDING,
-    paddingTop: spacing.sm,
-    gap: spacing.md,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.xxl,
   },
-  brandRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+
+  brandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.base,
+  },
   brandMark: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  brand: { fontWeight: "700", fontSize: 16, color: colors.textPrimary },
-  progress: { flexDirection: 'row', gap: spacing.sm },
-  progressSeg: {
-    flex: 1,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: colors.mintDeep,
-  },
-  progressSegActive: { backgroundColor: colors.primary },
-  stepCount: { color: colors.textSecondary },
-  content: { paddingHorizontal: SCREEN_PADDING, paddingTop: spacing.lg, paddingBottom: spacing.xxl },
   title: { marginBottom: spacing.sm },
-  subtitle: { color: colors.textSecondary, marginBottom: spacing.xl },
-  section: { gap: spacing.md },
-  groupLabel: { marginBottom: spacing.xs },
-  groupSpacer: { marginTop: spacing.lg },
-  stack: { gap: spacing.md },
-  optionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.base,
-    padding: spacing.base,
-    borderRadius: radius.xl,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    backgroundColor: colors.white,
+  subtitle: {
+    fontSize: 15,
+    lineHeight: 23,
+    color: colors.textSecondary,
+    marginBottom: spacing.xl,
   },
-  optionActive: { borderColor: colors.primary, backgroundColor: colors.mint },
-  optionText: { flex: 1, gap: 2 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
-  gridItem: {
-    width: '47.5%',
-    flexGrow: 1,
-    alignItems: 'flex-start',
-    gap: spacing.md,
-    padding: spacing.base,
-    borderRadius: radius.xl,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    backgroundColor: colors.white,
-  },
-  gridLabel: {},
-  pillRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  durationPill: {
-    paddingHorizontal: spacing.base,
-    paddingVertical: spacing.md,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.white,
-  },
-  durationPillActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  durationText: { fontWeight: "500", fontSize: 14, color: colors.textSecondary },
-  durationTextActive: { color: colors.white },
+  groupLabel: { marginBottom: spacing.md },
+
+  // City
   inputWrap: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    height: 52,
+    height: 48,
     paddingHorizontal: spacing.base,
-    borderRadius: radius.lg,
+    borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.white,
   },
-  input: { flex: 1, fontWeight: "500", fontSize: 15, color: colors.textPrimary },
-  hintRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.md },
-  hint: { color: colors.primary },
-  reviewCard: {
-    borderRadius: radius.xl,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.white,
-    paddingHorizontal: spacing.base,
+  input: { flex: 1, fontWeight: '500', fontSize: 15, color: colors.textPrimary },
+  picked: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    marginTop: spacing.md,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    backgroundColor: colors.mint,
   },
-  reviewRow: {
+  pickedAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: radius.pill,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pickedText: { flex: 1, gap: 2 },
+  pickedName: { fontSize: 15, fontWeight: '600', color: colors.textPrimary },
+  pickedNote: { fontSize: 12.5, color: colors.textSecondary },
+  pickedClear: { padding: spacing.xs },
+
+  // Days + arrival
+  pairRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    marginTop: spacing.xl,
+    marginBottom: spacing.xl,
+  },
+  pairCard: { flex: 1, borderRadius: radius.lg, gap: spacing.md },
+  stepperRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: spacing.base,
-    gap: spacing.base,
   },
-  reviewDivider: { borderBottomWidth: 1, borderBottomColor: colors.divider },
-  reviewValue: { flexShrink: 1, textAlign: 'right' },
-  welcomeRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.lg },
-  welcome: { flex: 1, color: colors.textSecondary },
-  footer: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    paddingHorizontal: SCREEN_PADDING,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
+  stepperBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  backBtn: { flex: 1 },
-  nextBtn: { flex: 2 },
+  stepperBtnDisabled: { opacity: 0.4 },
+  stepperValue: { fontSize: 26, lineHeight: 32, fontWeight: '700', color: colors.textPrimary },
+  arriveDate: { fontSize: 17, lineHeight: 22, fontWeight: '700', color: colors.textPrimary },
+  arriveNote: { fontSize: 12.5, lineHeight: 16, color: colors.textSecondary },
+
+  // Budget
+  budgetRow: { flexDirection: 'row', gap: spacing.sm },
+  budgetCard: {
+    flex: 1,
+    gap: spacing.xs,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.white,
+  },
+  budgetCardActive: {
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    backgroundColor: colors.mint,
+  },
+  budgetLabel: { fontSize: 13.5, fontWeight: '700', color: colors.textPrimary },
+  budgetLabelActive: { color: colors.primary },
+  budgetRange: { fontSize: 11.5, lineHeight: 15, color: colors.textSecondary },
+  budgetTotal: {
+    fontSize: 12.5,
+    lineHeight: 19,
+    color: colors.textMuted,
+    marginTop: spacing.sm,
+    marginBottom: spacing.xl,
+  },
+
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  cta: { marginTop: spacing.xxl },
+
+  // Generating
+  genWrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xxl,
+    paddingHorizontal: spacing.xxl,
+  },
+  genMarkWrap: { width: 100, height: 100, alignItems: 'center', justifyContent: 'center' },
+  genRing: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: radius.pill,
+    backgroundColor: colors.mintDeep,
+  },
+  genMark: {
+    width: 74,
+    height: 74,
+    borderRadius: radius.pill,
+    backgroundColor: colors.mint,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  genText: { gap: spacing.sm },
+  genTitle: { fontSize: 22, lineHeight: 29, fontWeight: '700', color: colors.textPrimary },
+  genSub: { fontSize: 14.5, lineHeight: 22, color: colors.textSecondary },
+  genSteps: { alignSelf: 'stretch', gap: spacing.md },
+  genStep: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  genCheck: {
+    width: 21,
+    height: 21,
+    borderRadius: radius.pill,
+    backgroundColor: colors.mint,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  genCheckDone: { backgroundColor: colors.primary },
+  genStepText: { fontSize: 14, fontWeight: '500', color: colors.textSecondary },
 });

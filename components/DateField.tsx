@@ -13,10 +13,17 @@ interface DateFieldProps {
   value: string | null;
   onChange: (iso: string) => void;
   minimumDate?: Date;
+  /** Replace the default 52px field with custom UI; `open` launches the picker. */
+  renderTrigger?: (open: () => void) => React.ReactNode;
 }
 
 /** Cross-platform date picker field (Android dialog / iOS inline modal). */
-export function DateField({ value, onChange, minimumDate = new Date() }: DateFieldProps) {
+export function DateField({
+  value,
+  onChange,
+  minimumDate = new Date(),
+  renderTrigger,
+}: DateFieldProps) {
   const [iosOpen, setIosOpen] = useState(false);
   const current = value ? new Date(value) : new Date();
 
@@ -37,12 +44,16 @@ export function DateField({ value, onChange, minimumDate = new Date() }: DateFie
 
   return (
     <>
-      <TouchableOpacity activeOpacity={0.8} onPress={open} style={styles.field}>
-        <CalendarDays size={20} color={colors.primary} strokeWidth={2} />
-        <AppText style={[styles.value, !value && styles.placeholder]}>
-          {formatDateLabel(value)}
-        </AppText>
-      </TouchableOpacity>
+      {renderTrigger ? (
+        renderTrigger(open)
+      ) : (
+        <TouchableOpacity activeOpacity={0.8} onPress={open} style={styles.field}>
+          <CalendarDays size={20} color={colors.primary} strokeWidth={2} />
+          <AppText style={[styles.value, !value && styles.placeholder]}>
+            {formatDateLabel(value)}
+          </AppText>
+        </TouchableOpacity>
+      )}
 
       {Platform.OS === 'ios' && (
         <Modal visible={iosOpen} transparent animationType="fade">
