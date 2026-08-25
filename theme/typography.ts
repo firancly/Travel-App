@@ -7,12 +7,12 @@ import { colors } from './colors';
  * Colors kept on the app's green/white palette.
  */
 export const typography = {
-  // display-md
+  // display-lg — editorial hero title
   screenTitle: {
-    fontSize: 26,
-    lineHeight: 32,
+    fontSize: 30,
+    lineHeight: 36,
     fontWeight: '800',
-    letterSpacing: -0.3,
+    letterSpacing: -0.5,
     color: colors.textPrimary,
   },
   // h2
@@ -43,14 +43,14 @@ export const typography = {
     fontWeight: '600',
     color: colors.textPrimary,
   },
-  // label-sm (uppercase eyebrow)
+  // label-sm (wide-tracked uppercase eyebrow)
   label: {
     fontSize: 11,
     lineHeight: 14,
-    fontWeight: '500',
-    letterSpacing: 0.5,
+    fontWeight: '600',
+    letterSpacing: 1.3,
     textTransform: 'uppercase',
-    color: colors.textSecondary,
+    color: colors.textMuted,
   },
   // caption
   caption: {

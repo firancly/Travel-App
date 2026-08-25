@@ -23,7 +23,7 @@ import {
   SkeletonCard,
   EmptyState,
 } from "@/components";
-import { colors, spacing, radius, fonts } from "@/theme";
+import { colors, spacing, radius, shadows } from "@/theme";
 import { usePrefsStore } from "@/store/usePrefsStore";
 import { usePlanStore } from "@/store/usePlanStore";
 import { useWeatherStore } from "@/store/useWeatherStore";
@@ -256,10 +256,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
     justifyContent: "space-between",
-    paddingTop: spacing.sm,
-    marginBottom: spacing.lg,
+    paddingTop: spacing.base,
+    marginBottom: spacing.xl,
   },
-  greetingText: { flex: 1, gap: spacing.xs },
+  greetingText: { flex: 1, gap: spacing.sm },
   hello: { color: colors.textSecondary },
   status: { color: colors.primary, fontWeight: "600" },
   avatarBtn: {
@@ -308,7 +308,7 @@ const styles = StyleSheet.create({
     color: colors.primary,
   },
   weatherClose: { padding: spacing.xs },
-  section: { marginBottom: spacing.xl },
+  section: { marginBottom: spacing.xxl },
   todayRow: { flexDirection: "row", alignItems: "center", gap: spacing.md },
   timeCol: { width: 56 },
   time: {
@@ -328,5 +328,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderWidth: 1,
     borderColor: colors.border,
+    ...shadows.card,
   },
 });

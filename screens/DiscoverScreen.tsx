@@ -1,9 +1,9 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { View, StyleSheet, ScrollView, Platform } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import MapView, { Marker, PROVIDER_GOOGLE, Region } from 'react-native-maps';
-import { BottomSheetModal, BottomSheetView } from '@gorhom/bottom-sheet';
-import { MapPin, Plus, Check, Clock } from 'lucide-react-native';
+import React, { useCallback, useMemo, useRef, useState } from "react";
+import { View, StyleSheet, ScrollView, Platform } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import MapView, { Marker, PROVIDER_GOOGLE, Region } from "react-native-maps";
+import { BottomSheetModal, BottomSheetView } from "@gorhom/bottom-sheet";
+import { MapPin, Plus, Check, Clock } from "lucide-react-native";
 import {
   ScreenHeader,
   FilterChip,
@@ -13,14 +13,14 @@ import {
   Tag,
   Rating,
   SheetHandle,
-} from '@/components';
-import { colors, spacing, radius, fonts, SCREEN_PADDING } from '@/theme';
-import { mutedMapStyle } from '@/theme';
-import { places } from '@/mock';
-import { usePlanStore } from '@/store/usePlanStore';
-import { CATEGORY_META, CATEGORY_ORDER } from '@/utils/categories';
-import { formatDuration } from '@/utils/time';
-import type { Place, PlaceCategory } from '@/types';
+} from "@/components";
+import { colors, spacing, radius, fonts, SCREEN_PADDING } from "@/theme";
+import { mutedMapStyle } from "@/theme";
+import { places } from "@/mock";
+import { usePlanStore } from "@/store/usePlanStore";
+import { CATEGORY_META, CATEGORY_ORDER } from "@/utils/categories";
+import { formatDuration } from "@/utils/time";
+import type { Place, PlaceCategory } from "@/types";
 
 const KL_REGION: Region = {
   latitude: 3.15,
@@ -32,7 +32,7 @@ const KL_REGION: Region = {
 export function DiscoverScreen() {
   const mapRef = useRef<MapView>(null);
   const sheetRef = useRef<BottomSheetModal>(null);
-  const snapPoints = useMemo(() => ['42%'], []);
+  const snapPoints = useMemo(() => ["42%"], []);
 
   const [active, setActive] = useState<PlaceCategory[]>([]);
   const [selected, setSelected] = useState<Place | null>(null);
@@ -42,7 +42,10 @@ export function DiscoverScreen() {
   const [addedDay, setAddedDay] = useState<number | null>(null);
 
   const filtered = useMemo(
-    () => (active.length ? places.filter((p) => active.includes(p.category)) : places),
+    () =>
+      active.length
+        ? places.filter((p) => active.includes(p.category))
+        : places,
     [active],
   );
 
@@ -66,7 +69,9 @@ export function DiscoverScreen() {
     );
   }, []);
 
-  const inPlan = selected ? days.some((d) => d.items.some((i) => i.placeId === selected.id)) : false;
+  const inPlan = selected
+    ? days.some((d) => d.items.some((i) => i.placeId === selected.id))
+    : false;
 
   const onAdd = () => {
     if (!selected) return;
@@ -75,8 +80,11 @@ export function DiscoverScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
-      <ScreenHeader title="Discover" subtitle={`${filtered.length} curated spots near you`} />
+    <SafeAreaView style={styles.safe} edges={["top"]}>
+      <ScreenHeader
+        title="Discover"
+        subtitle={`${filtered.length} curated spots near you`}
+      />
 
       <ScrollView
         horizontal
@@ -84,7 +92,11 @@ export function DiscoverScreen() {
         contentContainerStyle={styles.chips}
         style={styles.chipsRow}
       >
-        <FilterChip label="All" selected={active.length === 0} onPress={() => setActive([])} />
+        <FilterChip
+          label="All"
+          selected={active.length === 0}
+          onPress={() => setActive([])}
+        />
         {CATEGORY_ORDER.map((cat) => (
           <FilterChip
             key={cat}
@@ -97,7 +109,7 @@ export function DiscoverScreen() {
       </ScrollView>
 
       <View style={styles.mapWrap}>
-        {Platform.OS === 'web' ? (
+        {Platform.OS === "web" ? (
           <View style={styles.webFallback}>
             <MapPin size={28} color={colors.primary} />
             <AppText variant="body" center style={{ marginTop: spacing.sm }}>
@@ -108,7 +120,7 @@ export function DiscoverScreen() {
           <MapView
             ref={mapRef}
             style={StyleSheet.absoluteFill}
-            provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
+            provider={Platform.OS === "android" ? PROVIDER_GOOGLE : undefined}
             customMapStyle={mutedMapStyle}
             initialRegion={KL_REGION}
             showsCompass={false}
@@ -117,7 +129,10 @@ export function DiscoverScreen() {
             {filtered.map((place) => (
               <Marker
                 key={place.id}
-                coordinate={{ latitude: place.latitude, longitude: place.longitude }}
+                coordinate={{
+                  latitude: place.latitude,
+                  longitude: place.longitude,
+                }}
                 onPress={() => onSelect(place)}
                 anchor={{ x: 0.5, y: 0.5 }}
               >
@@ -139,12 +154,16 @@ export function DiscoverScreen() {
           {selected && (
             <>
               <View style={styles.sheetHead}>
+                https://github.com/Rabieulawal/pitstop/pull/4
                 <View style={styles.sheetTitleWrap}>
                   <AppText variant="cardTitle" style={styles.sheetTitle}>
                     {selected.name}
                   </AppText>
                   <View style={styles.sheetMeta}>
-                    <Rating rating={selected.rating} reviews={selected.reviews} />
+                    <Rating
+                      rating={selected.rating}
+                      reviews={selected.reviews}
+                    />
                     <AppText variant="caption">- {selected.priceLevel}</AppText>
                   </View>
                 </View>
@@ -156,7 +175,9 @@ export function DiscoverScreen() {
 
               <View style={styles.sheetDuration}>
                 <Clock size={14} color={colors.textMuted} />
-                <AppText variant="caption">Suggested visit {formatDuration(selected.durationMin)}</AppText>
+                <AppText variant="caption">
+                  Suggested visit {formatDuration(selected.durationMin)}
+                </AppText>
               </View>
 
               <AppText variant="body" style={styles.sheetDesc}>
@@ -168,8 +189,8 @@ export function DiscoverScreen() {
                   addedDay != null
                     ? `Added to Day ${addedDay}`
                     : inPlan
-                      ? 'Already in your plan'
-                      : 'Add to Plan'
+                      ? "Already in your plan"
+                      : "Add to Plan"
                 }
                 icon={addedDay != null || inPlan ? Check : Plus}
                 onPress={onAdd}
@@ -188,16 +209,16 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.screen },
   chipsRow: { flexGrow: 0 },
   chips: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: spacing.sm,
     paddingHorizontal: SCREEN_PADDING,
     paddingBottom: spacing.base,
   },
-  mapWrap: { flex: 1, overflow: 'hidden' },
+  mapWrap: { flex: 1, overflow: "hidden" },
   webFallback: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     backgroundColor: colors.mint,
     padding: spacing.xl,
   },
@@ -207,11 +228,20 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xxl,
     gap: spacing.md,
   },
-  sheetHead: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: spacing.md },
+  sheetHead: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: spacing.md,
+  },
   sheetTitleWrap: { flex: 1, gap: spacing.xs },
   sheetTitle: { fontSize: 18 },
-  sheetMeta: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  sheetDuration: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  sheetMeta: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  sheetDuration: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+  },
   sheetDesc: { color: colors.body },
   sheetBtn: { marginTop: spacing.sm },
 });
