@@ -18,18 +18,17 @@ interface CardProps {
 }
 
 export function Card({ children, style, onPress, noPadding }: CardProps) {
-  const content = (
-    <View style={[styles.card, noPadding && styles.noPadding, style]}>{children}</View>
-  );
+  // The touchable *is* the card, so layout styles passed in (flex, width) apply.
+  const cardStyle = [styles.card, noPadding && styles.noPadding, style];
 
   if (onPress) {
     return (
-      <TouchableOpacity activeOpacity={0.85} onPress={onPress}>
-        {content}
+      <TouchableOpacity activeOpacity={0.85} onPress={onPress} style={cardStyle}>
+        {children}
       </TouchableOpacity>
     );
   }
-  return content;
+  return <View style={cardStyle}>{children}</View>;
 }
 
 const styles = StyleSheet.create({
