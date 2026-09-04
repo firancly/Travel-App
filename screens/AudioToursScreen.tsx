@@ -1,22 +1,37 @@
-import React from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import { Headphones, Clock, Languages, Play, MapPin } from 'lucide-react-native';
-import { BackHeader, AppText, Card, FeatureIcon, SkeletonCard } from '@/components';
-import { colors, spacing, radius, fonts, SCREEN_PADDING } from '@/theme';
-import { audioTours } from '@/mock';
-import { formatDuration } from '@/utils/time';
-import { useFakeLoading } from '@/hooks/useFakeLoading';
-import type { AudioTour } from '@/types';
+import React from "react";
+import { View, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
+import {
+  Headphones,
+  Clock,
+  Languages,
+  Play,
+  MapPin,
+} from "lucide-react-native";
+import {
+  BackHeader,
+  AppText,
+  Card,
+  FeatureIcon,
+  SkeletonCard,
+} from "@/components";
+import { colors, spacing, radius, fonts, SCREEN_PADDING } from "@/theme";
+import { audioTours } from "@/mock";
+import { formatDuration } from "@/utils/time";
+import { useFakeLoading } from "@/hooks/useFakeLoading";
+import type { AudioTour } from "@/types";
 
 export function AudioToursScreen() {
   const router = useRouter();
   const loading = useFakeLoading();
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
-      <BackHeader title="Audio Tours" subtitle={`${audioTours.length} self-guided tours in Kuala Lumpur`} />
+    <SafeAreaView style={styles.safe} edges={["top"]}>
+      <BackHeader
+        title="Audio Tours"
+        subtitle={`${audioTours.length} self-guided tours in Kuala Lumpur`}
+      />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -34,7 +49,12 @@ export function AudioToursScreen() {
               <TourCard
                 key={tour.id}
                 tour={tour}
-                onPress={() => router.push({ pathname: '/audio-player', params: { tourId: tour.id } })}
+                onPress={() =>
+                  router.push({
+                    pathname: "/audio-player",
+                    params: { tourId: tour.id },
+                  })
+                }
               />
             ))}
           </View>
@@ -67,7 +87,9 @@ function TourCard({ tour, onPress }: { tour: AudioTour; onPress: () => void }) {
       <View style={styles.metaRow}>
         <View style={styles.meta}>
           <Clock size={14} color={colors.textMuted} />
-          <AppText variant="caption">{formatDuration(tour.durationMin)}</AppText>
+          <AppText variant="caption">
+            {formatDuration(tour.durationMin)}
+          </AppText>
         </View>
         <View style={styles.meta}>
           <Languages size={14} color={colors.textMuted} />
@@ -79,7 +101,11 @@ function TourCard({ tour, onPress }: { tour: AudioTour; onPress: () => void }) {
         </View>
       </View>
 
-      <TouchableOpacity activeOpacity={0.8} style={styles.playBtn} onPress={onPress}>
+      <TouchableOpacity
+        activeOpacity={0.8}
+        style={styles.playBtn}
+        onPress={onPress}
+      >
         <Play size={16} color={colors.white} fill={colors.white} />
         <AppText style={styles.playText}>Play preview</AppText>
       </TouchableOpacity>
@@ -90,7 +116,7 @@ function TourCard({ tour, onPress }: { tour: AudioTour; onPress: () => void }) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.screen },
   content: { paddingHorizontal: SCREEN_PADDING, paddingBottom: spacing.xxl },
-  head: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
+  head: { flexDirection: "row", alignItems: "flex-start", gap: spacing.md },
   headText: { flex: 1, gap: spacing.xs },
   priceTag: {
     backgroundColor: colors.mint,
@@ -100,12 +126,12 @@ const styles = StyleSheet.create({
   },
   price: { fontWeight: "700", fontSize: 15, color: colors.primary },
   desc: { color: colors.body, marginTop: spacing.md },
-  metaRow: { flexDirection: 'row', gap: spacing.lg, marginTop: spacing.md },
-  meta: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  metaRow: { flexDirection: "row", gap: spacing.lg, marginTop: spacing.md },
+  meta: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
   playBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: spacing.sm,
     backgroundColor: colors.primary,
     height: 44,

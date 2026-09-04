@@ -1,19 +1,33 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, Platform } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams } from 'expo-router';
-import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
-import { Play, Pause, SkipBack, SkipForward, MapPin } from 'lucide-react-native';
-import { BackHeader, AppText, Tag, MapMarker } from '@/components';
-import { colors, spacing, radius, fonts, shadows, mutedMapStyle, SCREEN_PADDING } from '@/theme';
-import { findAudioTour } from '@/mock';
-import { formatDuration } from '@/utils/time';
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { View, StyleSheet, TouchableOpacity, Platform } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useLocalSearchParams } from "expo-router";
+import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from "react-native-maps";
+import {
+  Play,
+  Pause,
+  SkipBack,
+  SkipForward,
+  MapPin,
+} from "lucide-react-native";
+import { BackHeader, AppText, Tag, MapMarker } from "@/components";
+import {
+  colors,
+  spacing,
+  radius,
+  fonts,
+  shadows,
+  mutedMapStyle,
+  SCREEN_PADDING,
+} from "@/theme";
+import { findAudioTour } from "@/mock";
+import { formatDuration } from "@/utils/time";
 
 function clock(totalSec: number): string {
   const s = Math.max(0, Math.floor(totalSec));
   const m = Math.floor(s / 60);
   const r = s % 60;
-  return `${m}:${String(r).padStart(2, '0')}`;
+  return `${m}:${String(r).padStart(2, "0")}`;
 }
 
 export function AudioPlayerScreen() {
@@ -41,7 +55,11 @@ export function AudioPlayerScreen() {
   }, [playing, totalSec]);
 
   const coords = useMemo(
-    () => tour?.stops.map((s) => ({ latitude: s.latitude, longitude: s.longitude })) ?? [],
+    () =>
+      tour?.stops.map((s) => ({
+        latitude: s.latitude,
+        longitude: s.longitude,
+      })) ?? [],
     [tour],
   );
 
@@ -61,7 +79,7 @@ export function AudioPlayerScreen() {
 
   if (!tour) {
     return (
-      <SafeAreaView style={styles.safe} edges={['top']}>
+      <SafeAreaView style={styles.safe} edges={["top"]}>
         <BackHeader title="Audio Tour" />
         <View style={styles.center}>
           <AppText variant="body">Tour not found.</AppText>
@@ -71,7 +89,10 @@ export function AudioPlayerScreen() {
   }
 
   const fraction = totalSec ? elapsed / totalSec : 0;
-  const stopIndex = Math.min(tour.stops.length - 1, Math.floor(fraction * tour.stops.length));
+  const stopIndex = Math.min(
+    tour.stops.length - 1,
+    Math.floor(fraction * tour.stops.length),
+  );
   const currentStop = tour.stops[stopIndex];
 
   const seekToStop = (index: number) => {
@@ -81,11 +102,11 @@ export function AudioPlayerScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
       <BackHeader title="Now playing" />
 
       <View style={styles.mapCard}>
-        {Platform.OS === 'web' ? (
+        {Platform.OS === "web" ? (
           <View style={styles.webFallback}>
             <MapPin size={26} color={colors.primary} />
             <AppText variant="caption" center style={{ marginTop: spacing.sm }}>
@@ -96,7 +117,7 @@ export function AudioPlayerScreen() {
           <MapView
             ref={mapRef}
             style={StyleSheet.absoluteFill}
-            provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
+            provider={Platform.OS === "android" ? PROVIDER_GOOGLE : undefined}
             customMapStyle={mutedMapStyle}
             initialRegion={{
               latitude: coords[0]?.latitude ?? 3.147,
@@ -108,7 +129,11 @@ export function AudioPlayerScreen() {
             pitchEnabled={false}
             rotateEnabled={false}
           >
-            <Polyline coordinates={coords} strokeColor={colors.primary} strokeWidth={4} />
+            <Polyline
+              coordinates={coords}
+              strokeColor={colors.primary}
+              strokeWidth={4}
+            />
             {tour.stops.map((s, i) => (
               <Marker
                 key={s.name}
@@ -138,7 +163,11 @@ export function AudioPlayerScreen() {
 
         <View style={styles.stopRow}>
           <MapPin size={16} color={colors.primary} />
-          <AppText variant="bodyStrong" numberOfLines={1} style={styles.stopText}>
+          <AppText
+            variant="bodyStrong"
+            numberOfLines={1}
+            style={styles.stopText}
+          >
             Stop {stopIndex + 1} of {tour.stops.length} - {currentStop.name}
           </AppText>
         </View>
@@ -147,7 +176,12 @@ export function AudioPlayerScreen() {
       {/* Progress + controls */}
       <View style={styles.controls}>
         <View style={styles.progressTrack}>
-          <View style={[styles.progressFill, { width: `${Math.round(fraction * 100)}%` }]} />
+          <View
+            style={[
+              styles.progressFill,
+              { width: `${Math.round(fraction * 100)}%` },
+            ]}
+          />
         </View>
         <View style={styles.times}>
           <AppText variant="caption">{clock(elapsed)}</AppText>
@@ -160,7 +194,11 @@ export function AudioPlayerScreen() {
             style={styles.skip}
             onPress={() => seekToStop(stopIndex - 1)}
           >
-            <SkipBack size={24} color={colors.textPrimary} fill={colors.textPrimary} />
+            <SkipBack
+              size={24}
+              color={colors.textPrimary}
+              fill={colors.textPrimary}
+            />
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -171,7 +209,12 @@ export function AudioPlayerScreen() {
             {playing ? (
               <Pause size={28} color={colors.white} fill={colors.white} />
             ) : (
-              <Play size={28} color={colors.white} fill={colors.white} style={{ marginLeft: 3 }} />
+              <Play
+                size={28}
+                color={colors.white}
+                fill={colors.white}
+                style={{ marginLeft: 3 }}
+              />
             )}
           </TouchableOpacity>
 
@@ -180,7 +223,11 @@ export function AudioPlayerScreen() {
             style={styles.skip}
             onPress={() => seekToStop(stopIndex + 1)}
           >
-            <SkipForward size={24} color={colors.textPrimary} fill={colors.textPrimary} />
+            <SkipForward
+              size={24}
+              color={colors.textPrimary}
+              fill={colors.textPrimary}
+            />
           </TouchableOpacity>
         </View>
       </View>
@@ -190,16 +237,21 @@ export function AudioPlayerScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.screen },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  center: { flex: 1, alignItems: "center", justifyContent: "center" },
   mapCard: {
     height: 260,
     marginHorizontal: SCREEN_PADDING,
     borderRadius: radius.xl,
-    overflow: 'hidden',
+    overflow: "hidden",
     backgroundColor: colors.mint,
     ...shadows.card,
   },
-  webFallback: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.lg },
+  webFallback: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: spacing.lg,
+  },
   body: {
     flex: 1,
     paddingHorizontal: SCREEN_PADDING,
@@ -207,10 +259,10 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   narrator: { color: colors.textSecondary },
-  tags: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs },
+  tags: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.xs },
   stopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing.sm,
     backgroundColor: colors.mint,
     padding: spacing.md,
@@ -227,14 +279,18 @@ const styles = StyleSheet.create({
     height: 6,
     borderRadius: 3,
     backgroundColor: colors.mintDeep,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   progressFill: { height: 6, borderRadius: 3, backgroundColor: colors.primary },
-  times: { flexDirection: 'row', justifyContent: 'space-between', marginTop: spacing.sm },
+  times: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: spacing.sm,
+  },
   buttons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: spacing.xxl,
     marginTop: spacing.md,
   },
@@ -244,8 +300,8 @@ const styles = StyleSheet.create({
     height: 72,
     borderRadius: 36,
     backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     ...shadows.floating,
   },
 });

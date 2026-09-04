@@ -2,11 +2,12 @@ import React from 'react';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { useAnimatedStyle, withSpring } from 'react-native-reanimated';
-import { Home, Compass, CalendarRange, User } from 'lucide-react-native';
+import { Home, Compass, CalendarRange, User, Plus } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { AppText } from '@/components';
-import { colors, fonts, spacing } from '@/theme';
+import { colors, fonts, spacing, radius, shadows } from '@/theme';
+import { useTripsStore } from '@/store/useTripsStore';
 
 const ICONS: Record<string, LucideIcon> = {
   home: Home,
@@ -51,27 +52,46 @@ function TabButton({
 
 export function TabBar({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
+  const startNewTrip = useTripsStore((s) => s.startNewTrip);
+
+  const mid = Math.ceil(state.routes.length / 2);
+  const left = state.routes.slice(0, mid);
+  const right = state.routes.slice(mid);
+
+  const renderTab = (route: (typeof state.routes)[number]) => {
+    const index = state.routes.indexOf(route);
+    const focused = state.index === index;
+    const onPress = () => {
+      const event = navigation.emit({
+        type: 'tabPress',
+        target: route.key,
+        canPreventDefault: true,
+      });
+      if (!focused && !event.defaultPrevented) {
+        navigation.navigate(route.name);
+      }
+    };
+    return (
+      <TabButton key={route.key} routeName={route.name} focused={focused} onPress={onPress} />
+    );
+  };
 
   return (
     <View style={[styles.bar, { paddingBottom: insets.bottom, height: 60 + insets.bottom }]}>
-      {state.routes.map((route, index) => {
-        const focused = state.index === index;
+      {left.map(renderTab)}
 
-        const onPress = () => {
-          const event = navigation.emit({
-            type: 'tabPress',
-            target: route.key,
-            canPreventDefault: true,
-          });
-          if (!focused && !event.defaultPrevented) {
-            navigation.navigate(route.name);
-          }
-        };
+      <View style={styles.fabSlot}>
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={startNewTrip}
+          style={styles.fab}
+        >
+          <Plus size={26} color={colors.white} strokeWidth={2.4} />
+        </TouchableOpacity>
+        <AppText style={styles.fabLabel}>New trip</AppText>
+      </View>
 
-        return (
-          <TabButton key={route.key} routeName={route.name} focused={focused} onPress={onPress} />
-        );
-      })}
+      {right.map(renderTab)}
     </View>
   );
 }
@@ -94,6 +114,28 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 4,
     paddingTop: spacing.sm,
+  },
+  fabSlot: {
+    width: 76,
+    alignItems: 'center',
+  },
+  fab: {
+    width: 54,
+    height: 54,
+    marginTop: -24,
+    borderRadius: radius.pill,
+    backgroundColor: colors.primary,
+    borderWidth: 4,
+    borderColor: colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadows.card,
+  },
+  fabLabel: {
+    marginTop: 2,
+    fontWeight: '600',
+    fontSize: 10,
+    color: colors.textMuted,
   },
   label: {
     fontWeight: "500",

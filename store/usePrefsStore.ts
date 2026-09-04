@@ -6,6 +6,11 @@ import { addDaysToISO } from '@/utils/date';
 
 interface PrefsState extends Preferences {
   onboarded: boolean;
+  /** True once onboarding has been completed at least once — lets the
+   *  onboarding screen tell a first-run visit apart from a re-opened edit
+   *  (only the latter has somewhere to go back to). Never reset by
+   *  `editPreferences`; cleared by `reset`. */
+  hasCompletedOnce: boolean;
   /** True once AsyncStorage has rehydrated this store. */
   _hydrated: boolean;
 
@@ -17,10 +22,16 @@ interface PrefsState extends Preferences {
   completeOnboarding: () => void;
   /** Re-open onboarding while keeping the current answers. */
   editPreferences: () => void;
+  /** Blank the answer fields and open onboarding for a brand-new trip. */
+  startDraft: () => void;
+  /** Overwrite all answer fields at once (used to restore a snapshot on cancel). */
+  restorePreferences: (p: Preferences) => void;
+  /** Close a re-opened onboarding edit without generating — just returns to the app. */
+  cancelEditing: () => void;
   reset: () => void;
 }
 
-const DEFAULTS: Preferences & { onboarded: boolean } = {
+const DEFAULTS: Preferences & { onboarded: boolean; hasCompletedOnce: boolean } = {
   budget: null,
   interests: [],
   durationDays: 3,
@@ -28,6 +39,7 @@ const DEFAULTS: Preferences & { onboarded: boolean } = {
   startDate: null,
   endDate: null,
   onboarded: false,
+  hasCompletedOnce: false,
 };
 
 export const usePrefsStore = create<PrefsState>()(
@@ -58,12 +70,28 @@ export const usePrefsStore = create<PrefsState>()(
       completeOnboarding: () =>
         set((s) => ({
           onboarded: true,
+          hasCompletedOnce: true,
           endDate: s.startDate
             ? addDaysToISO(s.startDate, Math.max(0, s.durationDays - 1))
             : s.endDate,
         })),
 
       editPreferences: () => set({ onboarded: false }),
+
+      startDraft: () =>
+        set({
+          budget: null,
+          interests: [],
+          durationDays: 3,
+          destination: '', // worldwide — no default city for a new trip
+          startDate: null,
+          endDate: null,
+          onboarded: false,
+        }),
+
+      restorePreferences: (p) => set({ ...p }),
+
+      cancelEditing: () => set({ onboarded: true }),
 
       reset: () => set({ ...DEFAULTS }),
     }),

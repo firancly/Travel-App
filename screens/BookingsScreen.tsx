@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState } from "react";
 import {
   View,
   StyleSheet,
@@ -8,8 +8,8 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import {
   Utensils,
   Ticket,
@@ -18,8 +18,8 @@ import {
   Minus,
   X,
   CalendarClock,
-} from 'lucide-react-native';
-import type { LucideIcon } from 'lucide-react-native';
+} from "lucide-react-native";
+import type { LucideIcon } from "lucide-react-native";
 import {
   BackHeader,
   AppText,
@@ -30,17 +30,17 @@ import {
   DateField,
   EmptyState,
   SkeletonCard,
-} from '@/components';
-import { colors, spacing, radius, fonts, SCREEN_PADDING } from '@/theme';
-import { bookings as seedBookings } from '@/mock';
-import { formatDateLabel } from '@/utils/date';
-import { useFakeLoading } from '@/hooks/useFakeLoading';
-import type { Booking, BookingCategory } from '@/types';
+} from "@/components";
+import { colors, spacing, radius, fonts, SCREEN_PADDING } from "@/theme";
+import { bookings as seedBookings } from "@/mock";
+import { formatDateLabel } from "@/utils/date";
+import { useFakeLoading } from "@/hooks/useFakeLoading";
+import type { Booking, BookingCategory } from "@/types";
 
 const TABS: { key: BookingCategory; label: string; icon: LucideIcon }[] = [
-  { key: 'restaurants', label: 'Restaurants', icon: Utensils },
-  { key: 'activities', label: 'Activities', icon: Ticket },
-  { key: 'transport', label: 'Transport', icon: Bus },
+  { key: "restaurants", label: "Restaurants", icon: Utensils },
+  { key: "activities", label: "Activities", icon: Ticket },
+  { key: "transport", label: "Transport", icon: Bus },
 ];
 
 const ICON_FOR: Record<BookingCategory, LucideIcon> = {
@@ -51,17 +51,20 @@ const ICON_FOR: Record<BookingCategory, LucideIcon> = {
 
 export function BookingsScreen() {
   const loading = useFakeLoading();
-  const [tab, setTab] = useState<BookingCategory>('restaurants');
+  const [tab, setTab] = useState<BookingCategory>("restaurants");
   const [list, setList] = useState<Booking[]>(seedBookings);
   const [modalOpen, setModalOpen] = useState(false);
 
-  const filtered = useMemo(() => list.filter((b) => b.category === tab), [list, tab]);
+  const filtered = useMemo(
+    () => list.filter((b) => b.category === tab),
+    [list, tab],
+  );
   const tabLabel = TABS.find((t) => t.key === tab)!.label;
 
   const addBooking = (b: Booking) => setList((prev) => [b, ...prev]);
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={styles.safe} edges={["top"]}>
       <BackHeader title="Bookings" subtitle="Manage your reservations" />
 
       {/* Tabs */}
@@ -75,14 +78,23 @@ export function BookingsScreen() {
               onPress={() => setTab(t.key)}
               style={[styles.tab, active && styles.tabActive]}
             >
-              <t.icon size={16} color={active ? colors.white : colors.textSecondary} strokeWidth={2.2} />
-              <AppText style={[styles.tabText, active && styles.tabTextActive]}>{t.label}</AppText>
+              <t.icon
+                size={16}
+                color={active ? colors.white : colors.textSecondary}
+                strokeWidth={2.2}
+              />
+              <AppText style={[styles.tabText, active && styles.tabTextActive]}>
+                {t.label}
+              </AppText>
             </TouchableOpacity>
           );
         })}
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.content}
+      >
         {loading ? (
           <View style={{ gap: spacing.md }}>
             <SkeletonCard />
@@ -106,7 +118,11 @@ export function BookingsScreen() {
                     <AppText variant="cardTitle" numberOfLines={1}>
                       {b.name}
                     </AppText>
-                    <AppText variant="body" numberOfLines={1} style={styles.detail}>
+                    <AppText
+                      variant="body"
+                      numberOfLines={1}
+                      style={styles.detail}
+                    >
                       {b.detail}
                     </AppText>
                     <View style={styles.dateRow}>
@@ -123,7 +139,11 @@ export function BookingsScreen() {
       </ScrollView>
 
       <View style={styles.footer}>
-        <Button label={`Book a ${tabLabel.replace(/s$/, '').toLowerCase()}`} icon={Plus} onPress={() => setModalOpen(true)} />
+        <Button
+          label={`Book a ${tabLabel.replace(/s$/, "").toLowerCase()}`}
+          icon={Plus}
+          onPress={() => setModalOpen(true)}
+        />
       </View>
 
       <BookingModal
@@ -152,12 +172,12 @@ function BookingModal({
   onClose: () => void;
   onSubmit: (b: Booking) => void;
 }) {
-  const [name, setName] = useState('');
+  const [name, setName] = useState("");
   const [date, setDate] = useState<string | null>(null);
   const [party, setParty] = useState(2);
 
   const reset = () => {
-    setName('');
+    setName("");
     setDate(null);
     setParty(2);
   };
@@ -169,8 +189,8 @@ function BookingModal({
       category,
       name: name.trim(),
       detail: `Party of ${party}`,
-      dateTime: date ? formatDateLabel(date) : 'Date to confirm',
-      status: 'Pending',
+      dateTime: date ? formatDateLabel(date) : "Date to confirm",
+      status: "Pending",
       partySize: party,
     });
     reset();
@@ -178,15 +198,22 @@ function BookingModal({
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      onRequestClose={onClose}
+    >
       <KeyboardAvoidingView
         style={styles.modalRoot}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <View style={styles.modalCard}>
           <View style={styles.modalHandle} />
           <View style={styles.modalHead}>
-            <AppText variant="sectionHeader">New {categoryLabel.replace(/s$/, '')} booking</AppText>
+            <AppText variant="sectionHeader">
+              New {categoryLabel.replace(/s$/, "")} booking
+            </AppText>
             <TouchableOpacity onPress={onClose} style={styles.modalClose}>
               <X size={20} color={colors.textSecondary} />
             </TouchableOpacity>
@@ -231,8 +258,18 @@ function BookingModal({
           </View>
 
           <View style={styles.modalActions}>
-            <Button label="Cancel" variant="secondary" onPress={onClose} style={styles.flex1} />
-            <Button label="Confirm" onPress={submit} disabled={!name.trim()} style={styles.flex2} />
+            <Button
+              label="Cancel"
+              variant="secondary"
+              onPress={onClose}
+              style={styles.flex1}
+            />
+            <Button
+              label="Confirm"
+              onPress={submit}
+              disabled={!name.trim()}
+              style={styles.flex2}
+            />
           </View>
         </View>
       </KeyboardAvoidingView>
@@ -243,16 +280,16 @@ function BookingModal({
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.screen },
   tabs: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: spacing.sm,
     paddingHorizontal: SCREEN_PADDING,
     paddingBottom: spacing.base,
   },
   tab: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: spacing.xs,
     height: 40,
     borderRadius: radius.pill,
@@ -264,10 +301,10 @@ const styles = StyleSheet.create({
   tabText: { fontWeight: "500", fontSize: 12, color: colors.textSecondary },
   tabTextActive: { color: colors.white },
   content: { paddingHorizontal: SCREEN_PADDING, paddingBottom: spacing.xxl },
-  cardRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  cardRow: { flexDirection: "row", alignItems: "center", gap: spacing.md },
   cardBody: { flex: 1, gap: spacing.xs },
   detail: { color: colors.textSecondary },
-  dateRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  dateRow: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
   footer: {
     paddingHorizontal: SCREEN_PADDING,
     paddingTop: spacing.sm,
@@ -277,7 +314,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
   },
   // Modal
-  modalRoot: { flex: 1, justifyContent: 'flex-end', backgroundColor: colors.overlay },
+  modalRoot: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: colors.overlay,
+  },
   modalCard: {
     backgroundColor: colors.white,
     borderTopLeftRadius: radius.xl,
@@ -291,13 +332,13 @@ const styles = StyleSheet.create({
     height: 4,
     borderRadius: 2,
     backgroundColor: colors.sheetHandle,
-    alignSelf: 'center',
+    alignSelf: "center",
     marginBottom: spacing.base,
   },
   modalHead: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: spacing.base,
   },
   modalClose: { padding: spacing.xs },
@@ -313,17 +354,27 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: colors.textPrimary,
   },
-  stepper: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
+  stepper: { flexDirection: "row", alignItems: "center", gap: spacing.lg },
   stepBtn: {
     width: 44,
     height: 44,
     borderRadius: 22,
     backgroundColor: colors.mint,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
-  stepValue: { fontWeight: "700", fontSize: 20, color: colors.textPrimary, minWidth: 28, textAlign: 'center' },
-  modalActions: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.xl },
+  stepValue: {
+    fontWeight: "700",
+    fontSize: 20,
+    color: colors.textPrimary,
+    minWidth: 28,
+    textAlign: "center",
+  },
+  modalActions: {
+    flexDirection: "row",
+    gap: spacing.md,
+    marginTop: spacing.xl,
+  },
   flex1: { flex: 1 },
   flex2: { flex: 2 },
 });

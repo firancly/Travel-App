@@ -23,6 +23,12 @@ import {
   Tag as TagIcon,
   X,
   Settings,
+  CreditCard,
+  Car,
+  Signal,
+  Zap,
+  MessageCircle,
+  Siren,
 } from "lucide-react-native";
 import type { LucideIcon } from "lucide-react-native";
 import {
@@ -60,6 +66,16 @@ const CONDITION_ICON: Record<WeatherCondition, LucideIcon> = {
   rain: CloudRain,
   thunder: CloudLightning,
 };
+
+/** "Before you go" facts grid rows (KL). */
+const FACTS: { icon: LucideIcon; label: string; value: string; note: string }[] = [
+  { icon: CreditCard, label: "Money", value: "Ringgit, RM", note: "Cards everywhere; hawkers are cash only." },
+  { icon: Car, label: "Getting around", value: "Grab + MRT", note: "Grab is cheap; MRT beats traffic at 6pm." },
+  { icon: Signal, label: "Data", value: "eSIM on arrival", note: "RM 25 for 15GB. Coverage is excellent." },
+  { icon: Zap, label: "Power", value: "Type G · 240V", note: "Same three-pin plug as the UK." },
+  { icon: MessageCircle, label: "Language", value: "Malay + English", note: "English is understood almost everywhere." },
+  { icon: Siren, label: "Emergency", value: "999", note: "Tourist police: 03-2166 1122." },
+];
 
 /** Local knowledge rows from the design's "Local rules of thumb" list (KL). */
 const TIPS: { icon: LucideIcon; title: string; body: string }[] = [
@@ -202,7 +218,8 @@ export function HomeScreen() {
               {cityName(prefs.destination)}
             </AppText>
             <AppText style={styles.heroStatus}>
-              {trip.statusLabel} · {days.length} days planned · {totalStops} stops
+              {trip.statusLabel} · {days.length} days planned · {totalStops}{" "}
+              stops
             </AppText>
           </View>
           <TouchableOpacity
@@ -345,6 +362,19 @@ export function HomeScreen() {
           </View>
         </View>
 
+        {/* Before you go */}
+        <View style={styles.section}>
+          <SectionHeader
+            title="Before you go"
+            subtitle="Everything worth knowing before you land."
+          />
+          <View style={styles.factGrid}>
+            {FACTS.map((f) => (
+              <FactCard key={f.label} {...f} />
+            ))}
+          </View>
+        </View>
+
         {/* Local knowledge */}
         <View style={styles.section}>
           <SectionHeader title="Local rules of thumb" />
@@ -444,6 +474,27 @@ function ActionCard({
       <AppText variant="label">{label}</AppText>
       <AppText style={styles.actionValue}>{value}</AppText>
       <AppText style={styles.actionNote}>{note}</AppText>
+    </Card>
+  );
+}
+
+function FactCard({
+  icon: Icon,
+  label,
+  value,
+  note,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: string;
+  note: string;
+}) {
+  return (
+    <Card style={styles.factCard}>
+      <FeatureIcon icon={Icon} size={32} />
+      <AppText variant="label">{label}</AppText>
+      <AppText style={styles.factValue}>{value}</AppText>
+      <AppText style={styles.factNote}>{note}</AppText>
     </Card>
   );
 }
@@ -598,6 +649,22 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   actionNote: { fontSize: 12, lineHeight: 17, color: colors.textSecondary },
+
+  // Before you go
+  factGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.md },
+  factCard: {
+    width: "47.5%",
+    flexGrow: 1,
+    borderRadius: radius.lg,
+    gap: spacing.sm,
+  },
+  factValue: {
+    fontSize: 15,
+    lineHeight: 19,
+    fontWeight: "700",
+    color: colors.textPrimary,
+  },
+  factNote: { fontSize: 12, lineHeight: 17, color: colors.textSecondary },
 
   // Tips
   tipCard: { borderRadius: radius.lg },

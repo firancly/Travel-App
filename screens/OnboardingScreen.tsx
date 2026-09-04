@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from "react";
 import {
   View,
   StyleSheet,
@@ -7,15 +7,15 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withRepeat,
   withTiming,
   Easing,
-} from 'react-native-reanimated';
+} from "react-native-reanimated";
 import {
   Landmark,
   Utensils,
@@ -29,38 +29,54 @@ import {
   Check,
   X,
   Sparkles,
-} from 'lucide-react-native';
-import type { LucideIcon } from 'lucide-react-native';
-import { AppText, Button, Card, FilterChip } from '@/components';
-import { DateField } from '@/components/DateField';
-import { colors, spacing, radius, SCREEN_PADDING } from '@/theme';
-import { usePrefsStore } from '@/store/usePrefsStore';
-import { usePlanStore } from '@/store/usePlanStore';
-import type { BudgetRange, Interest } from '@/types';
-import { formatShortDate } from '@/utils/date';
+  ArrowLeft,
+} from "lucide-react-native";
+import type { LucideIcon } from "lucide-react-native";
+import { AppText, Button, Card, FilterChip } from "@/components";
+import { DateField } from "@/components/DateField";
+import { colors, spacing, radius, SCREEN_PADDING } from "@/theme";
+import { usePrefsStore } from "@/store/usePrefsStore";
+import { usePlanStore } from "@/store/usePlanStore";
+import { useTripsStore } from "@/store/useTripsStore";
+import type { BudgetRange, Interest, Preferences } from "@/types";
+import { formatShortDate } from "@/utils/date";
+
+const CITIES: { name: string; country: string; note: string }[] = [
+  { name: "Kuala Lumpur", country: "Malaysia", note: "Colonial core, night markets, caves" },
+  { name: "Penang", country: "Malaysia", note: "Street art, hawker food, hill trails" },
+  { name: "Malacca", country: "Malaysia", note: "Dutch square, river houses" },
+  { name: "Kota Kinabalu", country: "Malaysia", note: "Islands, sunsets, Mount Kinabalu" },
+  { name: "Singapore", country: "Singapore", note: "Gardens, hawker centres, skyline" },
+  { name: "Bangkok", country: "Thailand", note: "Temples, canals, rooftop bars" },
+  { name: "Hanoi", country: "Vietnam", note: "Old quarter, lakes, coffee culture" },
+  { name: "Ho Chi Minh City", country: "Vietnam", note: "Markets, war history, street food" },
+  { name: "Jakarta", country: "Indonesia", note: "Old town, museums, jazz bars" },
+  { name: "Bali", country: "Indonesia", note: "Rice terraces, temples, surf" },
+  { name: "Manila", country: "Philippines", note: "Intramuros, bay sunsets" },
+];
 
 const BUDGETS: { key: BudgetRange; label: string; range: string }[] = [
-  { key: 'budget', label: 'Budget', range: 'Under $80 / day' },
-  { key: 'mid', label: 'Mid-range', range: '$80 - $200 / day' },
-  { key: 'luxury', label: 'Luxury', range: '$200+ / day' },
+  { key: "budget", label: "Budget", range: "Under $80 / day" },
+  { key: "mid", label: "Mid-range", range: "$80 - $200 / day" },
+  { key: "luxury", label: "Luxury", range: "$200+ / day" },
 ];
 
 const INTERESTS: { key: Interest; label: string; icon: LucideIcon }[] = [
-  { key: 'culture', label: 'Culture', icon: Landmark },
-  { key: 'food', label: 'Food', icon: Utensils },
-  { key: 'adventure', label: 'Adventure', icon: Mountain },
-  { key: 'relaxation', label: 'Relaxation', icon: Waves },
+  { key: "culture", label: "Culture", icon: Landmark },
+  { key: "food", label: "Food", icon: Utensils },
+  { key: "adventure", label: "Adventure", icon: Mountain },
+  { key: "relaxation", label: "Relaxation", icon: Waves },
 ];
 
 const MIN_DAYS = 1;
 const MAX_DAYS = 14;
 
 const GEN_STEPS = [
-  'Reading your interests',
-  'Finding candidate stops',
-  'Grouping them by neighbourhood',
-  'Checking opening hours',
-  'Adding travel time between stops',
+  "Reading your interests",
+  "Finding candidate stops",
+  "Grouping them by neighbourhood",
+  "Checking opening hours",
+  "Adding travel time between stops",
 ];
 const GEN_STEP_MS = 900;
 
@@ -68,22 +84,22 @@ const MS_PER_DAY = 1000 * 60 * 60 * 24;
 
 /** "In 5 days" / "Today" / "Tomorrow" for the Arriving card. */
 function arrivalNote(iso: string | null): string {
-  if (!iso) return 'Pick a date';
+  if (!iso) return "Pick a date";
   const startOfDay = (d: Date) =>
     new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
   const diff = Math.round(
     (startOfDay(new Date(iso)) - startOfDay(new Date())) / MS_PER_DAY,
   );
-  if (diff < 0) return 'In the past';
-  if (diff === 0) return 'Today';
-  if (diff === 1) return 'Tomorrow';
+  if (diff < 0) return "In the past";
+  if (diff === 0) return "Today";
+  if (diff === 1) return "Tomorrow";
   return `In ${diff} days`;
 }
 
 /** Country / region half of a "City, Country" string. */
 function destinationNote(destination: string): string {
-  const rest = destination.split(',').slice(1).join(',').trim();
-  return rest || 'Tap the field above to change it';
+  const rest = destination.split(",").slice(1).join(",").trim();
+  return rest || "Tap the field above to change it";
 }
 
 export function OnboardingScreen() {
@@ -93,23 +109,74 @@ export function OnboardingScreen() {
     durationDays,
     destination,
     startDate,
+    endDate,
+    hasCompletedOnce,
     setBudget,
     toggleInterest,
     setDuration,
     setDestination,
     setStartDate,
     completeOnboarding,
+    restorePreferences,
+    cancelEditing,
   } = usePrefsStore();
 
   const generatePlan = usePlanStore((s) => s.generatePlan);
   const generating = usePlanStore((s) => s.generating);
 
+  const newTripCancelId = useTripsStore((s) => s.newTripCancelId);
+  const switchTrip = useTripsStore((s) => s.switchTrip);
+  const saveActiveSnapshot = useTripsStore((s) => s.saveActiveSnapshot);
+
+  // Re-opened via "Edit trip details" / the tab-bar FAB, not first-run — there's
+  // something to go back to, so snapshot the answers once on mount and offer
+  // a back arrow that restores them (discarding any in-progress changes).
+  // Two cases: editing the active trip's answers (plain prefs snapshot), or
+  // a fresh "new trip" draft (newTripCancelId — restore the trip it replaced).
+  const canGoBack = hasCompletedOnce;
+  const snapshotRef = useRef<Preferences | null>(
+    canGoBack && !newTripCancelId
+      ? { budget, interests, durationDays, destination, startDate, endDate }
+      : null,
+  );
+  const onBack = () => {
+    if (newTripCancelId) {
+      switchTrip(newTripCancelId);
+      useTripsStore.setState({ newTripCancelId: null });
+    } else if (snapshotRef.current) {
+      restorePreferences(snapshotRef.current);
+    }
+    cancelEditing();
+  };
+
+  const [cityQuery, setCityQuery] = useState("");
+  const [citySearching, setCitySearching] = useState(false);
+  const q = cityQuery.trim().toLowerCase();
+  // Only a curated shortlist gets suggestions — the app supports any city
+  // worldwide via free text, this is just an autocomplete assist.
+  const cityResults = q
+    ? CITIES.filter((c) => c.name.toLowerCase().includes(q)).slice(0, 5)
+    : [];
+  const pickCity = (c: (typeof CITIES)[number]) => {
+    setDestination(`${c.name}, ${c.country}`);
+    setCityQuery("");
+    setCitySearching(false);
+  };
+
   const canGenerate = destination.trim().length > 0 && !!startDate;
 
   const onGenerate = async () => {
     if (!canGenerate || generating) return;
-    await generatePlan({ destination, durationDays, budget, interests, startDate });
+    await generatePlan({
+      destination,
+      durationDays,
+      budget,
+      interests,
+      startDate,
+    });
     completeOnboarding();
+    saveActiveSnapshot();
+    useTripsStore.setState({ newTripCancelId: null });
   };
 
   if (generating) return <GeneratingView />;
@@ -117,10 +184,10 @@ export function OnboardingScreen() {
   const selectedBudget = BUDGETS.find((b) => b.key === budget);
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <ScrollView
           style={styles.flex}
@@ -128,12 +195,30 @@ export function OnboardingScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <View style={styles.brandRow}>
-            <View style={styles.brandMark}>
-              <Compass size={16} color={colors.white} strokeWidth={2.4} />
+          {canGoBack ? (
+            <View style={styles.headerRow}>
+              <TouchableOpacity
+                onPress={onBack}
+                hitSlop={10}
+                style={styles.backBtn}
+              >
+                <ArrowLeft size={19} color={colors.textPrimary} strokeWidth={2.2} />
+              </TouchableOpacity>
+              <View style={[styles.brandRow, styles.brandRowInline]}>
+                <View style={styles.brandMark}>
+                  <Compass size={16} color={colors.white} strokeWidth={2.4} />
+                </View>
+                <AppText variant="label">Navigate the Moment</AppText>
+              </View>
             </View>
-            <AppText variant="label">Navigate the Moment</AppText>
-          </View>
+          ) : (
+            <View style={styles.brandRow}>
+              <View style={styles.brandMark}>
+                <Compass size={16} color={colors.white} strokeWidth={2.4} />
+              </View>
+              <AppText variant="label">Navigate the Moment</AppText>
+            </View>
+          )}
 
           <AppText variant="screenTitle" style={styles.title}>
             Where are we going?
@@ -149,29 +234,60 @@ export function OnboardingScreen() {
           <View style={styles.inputWrap}>
             <Search size={18} color={colors.textMuted} strokeWidth={2.2} />
             <TextInput
-              value={destination}
-              onChangeText={setDestination}
-              placeholder="Search a city"
+              value={cityQuery}
+              onChangeText={(t) => {
+                setCityQuery(t);
+                setCitySearching(true);
+                setDestination(t); // free text — any city worldwide, not just the shortlist
+              }}
+              onBlur={() => setCitySearching(false)}
+              placeholder="Search any city"
               placeholderTextColor={colors.textMuted}
               style={styles.input}
               returnKeyType="done"
             />
           </View>
-          {destination.trim().length > 0 ? (
+          {citySearching && cityResults.length > 0 ? (
+            <Card style={styles.resultsCard} noPadding>
+              {cityResults.map((c, idx) => (
+                <TouchableOpacity
+                  key={c.name}
+                  activeOpacity={0.8}
+                  onPress={() => pickCity(c)}
+                  style={[
+                    styles.resultRow,
+                    idx !== cityResults.length - 1 && styles.resultDivider,
+                  ]}
+                >
+                  <MapPin size={17} color={colors.textMuted} strokeWidth={2.2} />
+                  <View style={styles.resultText}>
+                    <AppText style={styles.resultName}>{c.name}</AppText>
+                    <AppText style={styles.resultNote} numberOfLines={1}>
+                      {c.country} · {c.note}
+                    </AppText>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </Card>
+          ) : null}
+          {!citySearching && destination.trim().length > 0 ? (
             <View style={styles.picked}>
               <View style={styles.pickedAvatar}>
                 <MapPin size={16} color={colors.white} strokeWidth={2.2} />
               </View>
               <View style={styles.pickedText}>
                 <AppText style={styles.pickedName} numberOfLines={1}>
-                  {destination.split(',')[0].trim()}
+                  {destination.split(",")[0].trim()}
                 </AppText>
                 <AppText style={styles.pickedNote} numberOfLines={1}>
                   {destinationNote(destination)}
                 </AppText>
               </View>
               <TouchableOpacity
-                onPress={() => setDestination('')}
+                onPress={() => {
+                  setDestination("");
+                  setCitySearching(true);
+                }}
                 hitSlop={8}
                 style={styles.pickedClear}
               >
@@ -188,13 +304,17 @@ export function OnboardingScreen() {
                 <StepperButton
                   icon={Minus}
                   disabled={durationDays <= MIN_DAYS}
-                  onPress={() => setDuration(Math.max(MIN_DAYS, durationDays - 1))}
+                  onPress={() =>
+                    setDuration(Math.max(MIN_DAYS, durationDays - 1))
+                  }
                 />
                 <AppText style={styles.stepperValue}>{durationDays}</AppText>
                 <StepperButton
                   icon={Plus}
                   disabled={durationDays >= MAX_DAYS}
-                  onPress={() => setDuration(Math.min(MAX_DAYS, durationDays + 1))}
+                  onPress={() =>
+                    setDuration(Math.min(MAX_DAYS, durationDays + 1))
+                  }
                 />
               </View>
             </Card>
@@ -206,9 +326,11 @@ export function OnboardingScreen() {
                 <Card style={styles.pairCard} onPress={open}>
                   <AppText variant="label">Arriving</AppText>
                   <AppText style={styles.arriveDate}>
-                    {startDate ? formatShortDate(startDate) : 'Set date'}
+                    {startDate ? formatShortDate(startDate) : "Set date"}
                   </AppText>
-                  <AppText style={styles.arriveNote}>{arrivalNote(startDate)}</AppText>
+                  <AppText style={styles.arriveNote}>
+                    {arrivalNote(startDate)}
+                  </AppText>
                 </Card>
               )}
             />
@@ -228,7 +350,12 @@ export function OnboardingScreen() {
                   onPress={() => setBudget(b.key)}
                   style={[styles.budgetCard, active && styles.budgetCardActive]}
                 >
-                  <AppText style={[styles.budgetLabel, active && styles.budgetLabelActive]}>
+                  <AppText
+                    style={[
+                      styles.budgetLabel,
+                      active && styles.budgetLabelActive,
+                    ]}
+                  >
                     {b.label}
                   </AppText>
                   <AppText style={styles.budgetRange}>{b.range}</AppText>
@@ -238,8 +365,8 @@ export function OnboardingScreen() {
           </View>
           <AppText style={styles.budgetTotal}>
             {selectedBudget
-              ? `${selectedBudget.range} across ${durationDays} ${durationDays === 1 ? 'day' : 'days'}.`
-              : 'Pick a range so the plan matches your spending.'}
+              ? `${selectedBudget.range} across ${durationDays} ${durationDays === 1 ? "day" : "days"}.`
+              : "Pick a range so the plan matches your spending."}
           </AppText>
 
           {/* Interests */}
@@ -329,7 +456,7 @@ function GeneratingView() {
   }));
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
       <View style={styles.genWrap}>
         <View style={styles.genMarkWrap}>
           <Animated.View style={[styles.genRing, ringStyle]} />
@@ -352,7 +479,10 @@ function GeneratingView() {
             const done = i < step;
             const reached = i <= step;
             return (
-              <View key={label} style={[styles.genStep, { opacity: reached ? 1 : 0.32 }]}>
+              <View
+                key={label}
+                style={[styles.genStep, { opacity: reached ? 1 : 0.32 }]}
+              >
                 <View style={[styles.genCheck, done && styles.genCheckDone]}>
                   <Check
                     size={12}
@@ -379,19 +509,36 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xxl,
   },
 
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: spacing.base,
+  },
+  backBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.white,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   brandRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing.sm,
     marginBottom: spacing.base,
   },
+  brandRowInline: { marginBottom: 0 },
   brandMark: {
     width: 26,
     height: 26,
     borderRadius: 13,
     backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   title: { marginBottom: spacing.sm },
   subtitle: {
@@ -404,8 +551,8 @@ const styles = StyleSheet.create({
 
   // City
   inputWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing.md,
     height: 48,
     paddingHorizontal: spacing.base,
@@ -414,10 +561,27 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     backgroundColor: colors.white,
   },
-  input: { flex: 1, fontWeight: '500', fontSize: 15, color: colors.textPrimary },
+  input: {
+    flex: 1,
+    fontWeight: "500",
+    fontSize: 15,
+    color: colors.textPrimary,
+  },
+  resultsCard: { marginTop: spacing.sm },
+  resultRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    paddingHorizontal: spacing.base,
+    paddingVertical: spacing.md,
+  },
+  resultDivider: { borderBottomWidth: 1, borderBottomColor: colors.divider },
+  resultText: { flex: 1, gap: 2 },
+  resultName: { fontWeight: "600", fontSize: 14.5, color: colors.textPrimary },
+  resultNote: { fontSize: 12, color: colors.textSecondary },
   picked: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing.md,
     marginTop: spacing.md,
     padding: spacing.md,
@@ -431,26 +595,26 @@ const styles = StyleSheet.create({
     height: 32,
     borderRadius: radius.pill,
     backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   pickedText: { flex: 1, gap: 2 },
-  pickedName: { fontSize: 15, fontWeight: '600', color: colors.textPrimary },
+  pickedName: { fontSize: 15, fontWeight: "600", color: colors.textPrimary },
   pickedNote: { fontSize: 12.5, color: colors.textSecondary },
   pickedClear: { padding: spacing.xs },
 
   // Days + arrival
   pairRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: spacing.md,
     marginTop: spacing.xl,
     marginBottom: spacing.xl,
   },
   pairCard: { flex: 1, borderRadius: radius.lg, gap: spacing.md },
   stepperRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   stepperBtn: {
     width: 34,
@@ -458,16 +622,26 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     borderWidth: 1,
     borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   stepperBtnDisabled: { opacity: 0.4 },
-  stepperValue: { fontSize: 26, lineHeight: 32, fontWeight: '700', color: colors.textPrimary },
-  arriveDate: { fontSize: 17, lineHeight: 22, fontWeight: '700', color: colors.textPrimary },
+  stepperValue: {
+    fontSize: 26,
+    lineHeight: 32,
+    fontWeight: "700",
+    color: colors.textPrimary,
+  },
+  arriveDate: {
+    fontSize: 17,
+    lineHeight: 22,
+    fontWeight: "700",
+    color: colors.textPrimary,
+  },
   arriveNote: { fontSize: 12.5, lineHeight: 16, color: colors.textSecondary },
 
   // Budget
-  budgetRow: { flexDirection: 'row', gap: spacing.sm },
+  budgetRow: { flexDirection: "row", gap: spacing.sm },
   budgetCard: {
     flex: 1,
     gap: spacing.xs,
@@ -483,7 +657,7 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
     backgroundColor: colors.mint,
   },
-  budgetLabel: { fontSize: 13.5, fontWeight: '700', color: colors.textPrimary },
+  budgetLabel: { fontSize: 13.5, fontWeight: "700", color: colors.textPrimary },
   budgetLabelActive: { color: colors.primary },
   budgetRange: { fontSize: 11.5, lineHeight: 15, color: colors.textSecondary },
   budgetTotal: {
@@ -494,20 +668,25 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
 
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   cta: { marginTop: spacing.xxl },
 
   // Generating
   genWrap: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     gap: spacing.xxl,
     paddingHorizontal: spacing.xxl,
   },
-  genMarkWrap: { width: 100, height: 100, alignItems: 'center', justifyContent: 'center' },
+  genMarkWrap: {
+    width: 100,
+    height: 100,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   genRing: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
@@ -520,22 +699,27 @@ const styles = StyleSheet.create({
     height: 74,
     borderRadius: radius.pill,
     backgroundColor: colors.mint,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   genText: { gap: spacing.sm },
-  genTitle: { fontSize: 22, lineHeight: 29, fontWeight: '700', color: colors.textPrimary },
+  genTitle: {
+    fontSize: 22,
+    lineHeight: 29,
+    fontWeight: "700",
+    color: colors.textPrimary,
+  },
   genSub: { fontSize: 14.5, lineHeight: 22, color: colors.textSecondary },
-  genSteps: { alignSelf: 'stretch', gap: spacing.md },
-  genStep: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  genSteps: { alignSelf: "stretch", gap: spacing.md },
+  genStep: { flexDirection: "row", alignItems: "center", gap: spacing.md },
   genCheck: {
     width: 21,
     height: 21,
     borderRadius: radius.pill,
     backgroundColor: colors.mint,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   genCheckDone: { backgroundColor: colors.primary },
-  genStepText: { fontSize: 14, fontWeight: '500', color: colors.textSecondary },
+  genStepText: { fontSize: 14, fontWeight: "500", color: colors.textSecondary },
 });

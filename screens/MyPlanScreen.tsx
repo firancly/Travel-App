@@ -1,18 +1,19 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
   Platform,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import DraggableFlatList, {
   RenderItemParams,
   ScaleDecorator,
-} from 'react-native-draggable-flatlist';
-import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
-import { useRouter } from 'expo-router';
+} from "react-native-draggable-flatlist";
+import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from "react-native-maps";
+import { BottomSheetModal, BottomSheetView } from "@gorhom/bottom-sheet";
+import { useRouter } from "expo-router";
 import {
   GripVertical,
   Clock,
@@ -22,7 +23,13 @@ import {
   Sparkles,
   ArrowLeftRight,
   Trash2,
-} from 'lucide-react-native';
+  Undo2,
+  Footprints,
+  Car,
+  TrainFront,
+  Navigation,
+} from "lucide-react-native";
+import type { LucideIcon } from "lucide-react-native";
 import {
   ScreenHeader,
   AppText,
@@ -33,32 +40,55 @@ import {
   EmptyState,
   SkeletonCard,
   MapMarker,
-} from '@/components';
-import { colors, spacing, radius, shadows, mutedMapStyle, SCREEN_PADDING } from '@/theme';
-import { usePlanStore } from '@/store/usePlanStore';
-import { usePrefsStore } from '@/store/usePrefsStore';
-import { useWeatherStore } from '@/store/useWeatherStore';
-import { CATEGORY_META } from '@/utils/categories';
-import { to12h, formatDuration } from '@/utils/time';
-import { getItemCoords } from '@/utils/coords';
-import { dateForDay, wetHoursForDate, rainProofReorder, hourOf } from '@/utils/rainProof';
-import { fetchRoute, type Coords } from '@/services/routing';
-import type { ItineraryItem } from '@/types';
+  SheetHandle,
+} from "@/components";
+import {
+  colors,
+  spacing,
+  radius,
+  shadows,
+  mutedMapStyle,
+  SCREEN_PADDING,
+} from "@/theme";
+import { usePlanStore } from "@/store/usePlanStore";
+import { usePrefsStore } from "@/store/usePrefsStore";
+import { useWeatherStore } from "@/store/useWeatherStore";
+import { CATEGORY_META, CATEGORY_ORDER } from "@/utils/categories";
+import { to12h, formatDuration } from "@/utils/time";
+import { getItemCoords } from "@/utils/coords";
+import {
+  dateForDay,
+  wetHoursForDate,
+  rainProofReorder,
+  hourOf,
+} from "@/utils/rainProof";
+import { fetchRoute, type Coords } from "@/services/routing";
+import type { ItineraryItem } from "@/types";
 
-type PlanView = 'list' | 'map';
+type PlanView = "list" | "map";
 
 // Amber warning tint, matching StatusBadge's "Pending" pair.
-const WET_BG = '#FFF3DF';
-const WET_FG = '#B7791F';
+const WET_BG = "#FFF3DF";
+const WET_FG = "#B7791F";
+
+// Rough per-hop travel time by mode (minutes) — no live transit API, mirrors the design.
+const MAP_MODES: { key: string; label: string; icon: LucideIcon; perHop: number }[] = [
+  { key: "walk", label: "Walk", icon: Footprints, perHop: 19 },
+  { key: "grab", label: "Grab", icon: Car, perHop: 11 },
+  { key: "transit", label: "Transit", icon: TrainFront, perHop: 15 },
+];
 
 export function MyPlanScreen() {
   const router = useRouter();
   const days = usePlanStore((s) => s.days);
   const reorderDayItems = usePlanStore((s) => s.reorderDayItems);
-  const smartSwap = usePlanStore((s) => s.smartSwap);
+  const getSwapCandidates = usePlanStore((s) => s.getSwapCandidates);
+  const applySwap = usePlanStore((s) => s.applySwap);
   const removeItem = usePlanStore((s) => s.removeItem);
   const generatePlan = usePlanStore((s) => s.generatePlan);
   const generating = usePlanStore((s) => s.generating);
+  const canUndo = usePlanStore((s) => s.canUndo);
+  const undo = usePlanStore((s) => s.undo);
   const prefs = usePrefsStore();
 
   const regenerate = () => {
@@ -73,7 +103,7 @@ export function MyPlanScreen() {
   };
 
   const [dayNumber, setDayNumber] = useState(days[0]?.day ?? 1);
-  const [view, setView] = useState<PlanView>('list');
+  const [view, setView] = useState<PlanView>("list");
   const day = days.find((d) => d.day === dayNumber) ?? days[0];
   const items = day?.items ?? [];
 
@@ -91,11 +121,15 @@ export function MyPlanScreen() {
 
   const wetHours = useMemo(() => {
     if (!weatherData || !prefs.startDate) return null;
-    return wetHoursForDate(weatherData.hourly, dateForDay(prefs.startDate, dayNumber));
+    return wetHoursForDate(
+      weatherData.hourly,
+      dateForDay(prefs.startDate, dayNumber),
+    );
   }, [weatherData, prefs.startDate, dayNumber]);
 
   const rainProofPlan = useMemo(
-    () => (wetHours && wetHours.size > 0 ? rainProofReorder(items, wetHours) : null),
+    () =>
+      wetHours && wetHours.size > 0 ? rainProofReorder(items, wetHours) : null,
     [items, wetHours],
   );
   const showRainProof = !!wetHours && wetHours.size > 0;
@@ -109,11 +143,42 @@ export function MyPlanScreen() {
 
   const onRainProof = () => {
     if (!rainProofPlan) {
-      setToast('Already rain-optimized.');
+      setToast("Already rain-optimized.");
       return;
     }
     reorderDayItems(dayNumber, rainProofPlan);
-    setToast('Moved outdoor stops to drier hours.');
+    setToast("Moved outdoor stops to drier hours.");
+  };
+
+  const onUndo = () => {
+    undo();
+    setToast("Reverted last change.");
+  };
+
+  // Swap-alternatives sheet: fetch up to 3 candidates for the tapped stop,
+  // let the traveler pick one (or keep what they have).
+  const swapSheetRef = useRef<BottomSheetModal>(null);
+  const swapSnapPoints = useMemo(() => ["55%"], []);
+  const [swapItemId, setSwapItemId] = useState<string | null>(null);
+  const [swapLoadingId, setSwapLoadingId] = useState<string | null>(null);
+  const [swapCandidates, setSwapCandidates] = useState<ItineraryItem[]>([]);
+  const swapTarget = items.find((i) => i.id === swapItemId);
+
+  const openSwap = async (itemId: string) => {
+    if (swapLoadingId) return;
+    setSwapLoadingId(itemId);
+    const candidates = await getSwapCandidates(dayNumber, itemId);
+    setSwapLoadingId(null);
+    setSwapCandidates(candidates);
+    setSwapItemId(itemId);
+    swapSheetRef.current?.present();
+  };
+
+  const pickCandidate = (candidate: ItineraryItem) => {
+    if (!swapItemId) return;
+    applySwap(dayNumber, swapItemId, candidate);
+    setToast(`Swapped in ${candidate.title.split(",")[0]}`);
+    swapSheetRef.current?.dismiss();
   };
 
   // Plottable stops in plan order — numbering + the polyline both derive from this.
@@ -121,10 +186,28 @@ export function MyPlanScreen() {
     () =>
       items
         .map((it) => ({ item: it, coord: getItemCoords(it) }))
-        .filter((p): p is { item: ItineraryItem; coord: NonNullable<ReturnType<typeof getItemCoords>> } => !!p.coord),
+        .filter(
+          (
+            p,
+          ): p is {
+            item: ItineraryItem;
+            coord: NonNullable<ReturnType<typeof getItemCoords>>;
+          } => !!p.coord,
+        ),
     [items],
   );
   const coords = useMemo(() => points.map((p) => p.coord), [points]);
+
+  // Map legend + transit-mode toggle + selected-stop detail card.
+  const [mapMode, setMapMode] = useState(0);
+  const [selectedIdx, setSelectedIdx] = useState(0);
+  useEffect(() => setSelectedIdx(0), [dayNumber]);
+  const selectedPoint = points[Math.min(selectedIdx, Math.max(0, points.length - 1))];
+  const selectedMeta = selectedPoint
+    ? CATEGORY_META[selectedPoint.item.category]
+    : null;
+  const activeMode = MAP_MODES[mapMode];
+  const hops = Math.max(0, points.length - 1);
 
   const mapRef = useRef<MapView>(null);
 
@@ -133,7 +216,7 @@ export function MyPlanScreen() {
   const [routeCoords, setRouteCoords] = useState<Coords[] | null>(null);
   useEffect(() => {
     setRouteCoords(null);
-    if (view !== 'map' || coords.length < 2) return;
+    if (view !== "map" || coords.length < 2) return;
     let cancelled = false;
     fetchRoute(coords).then((result) => {
       if (!cancelled) setRouteCoords(result);
@@ -144,7 +227,7 @@ export function MyPlanScreen() {
   }, [view, dayNumber, coords]);
 
   useEffect(() => {
-    if (view !== 'map') return;
+    if (view !== "map") return;
     if (coords.length === 1) {
       const t = setTimeout(
         () =>
@@ -169,7 +252,12 @@ export function MyPlanScreen() {
     }
   }, [view, dayNumber, coords]);
 
-  const renderItem = ({ item, drag, isActive, getIndex }: RenderItemParams<ItineraryItem>) => {
+  const renderItem = ({
+    item,
+    drag,
+    isActive,
+    getIndex,
+  }: RenderItemParams<ItineraryItem>) => {
     const idx = getIndex();
     return (
       <ScaleDecorator activeScale={1.03}>
@@ -179,7 +267,8 @@ export function MyPlanScreen() {
           isActive={isActive}
           last={idx === items.length - 1}
           isWet={!!wetHours && wetHours.has(hourOf(item.time))}
-          onSwap={() => smartSwap(dayNumber, item.id)}
+          swapping={swapLoadingId === item.id}
+          onOpenSwap={() => openSwap(item.id)}
           onRemove={() => removeItem(dayNumber, item.id)}
         />
       </ScaleDecorator>
@@ -187,18 +276,23 @@ export function MyPlanScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={styles.safe} edges={["top"]}>
       <ScreenHeader
         title="My Plan"
         subtitle={day?.label}
         right={
-          <Button
-            variant="pill"
-            icon={Sparkles}
-            label={generating ? 'Rebuilding…' : 'Rebuild'}
-            onPress={regenerate}
-            disabled={generating}
-          />
+          <View style={styles.headerActions}>
+            {canUndo ? (
+              <Button variant="pill" icon={Undo2} label="Undo" onPress={onUndo} />
+            ) : null}
+            <Button
+              variant="pill"
+              icon={Sparkles}
+              label={generating ? "Rebuilding…" : "Rebuild"}
+              onPress={regenerate}
+              disabled={generating}
+            />
+          </View>
         }
       />
 
@@ -228,19 +322,29 @@ export function MyPlanScreen() {
         <View style={styles.segmentRow}>
           <TouchableOpacity
             activeOpacity={0.85}
-            onPress={() => setView('list')}
-            style={[styles.segment, view === 'list' && styles.segmentActive]}
+            onPress={() => setView("list")}
+            style={[styles.segment, view === "list" && styles.segmentActive]}
           >
-            <AppText style={[styles.segmentText, view === 'list' && styles.segmentTextActive]}>
+            <AppText
+              style={[
+                styles.segmentText,
+                view === "list" && styles.segmentTextActive,
+              ]}
+            >
               List
             </AppText>
           </TouchableOpacity>
           <TouchableOpacity
             activeOpacity={0.85}
-            onPress={() => setView('map')}
-            style={[styles.segment, view === 'map' && styles.segmentActive]}
+            onPress={() => setView("map")}
+            style={[styles.segment, view === "map" && styles.segmentActive]}
           >
-            <AppText style={[styles.segmentText, view === 'map' && styles.segmentTextActive]}>
+            <AppText
+              style={[
+                styles.segmentText,
+                view === "map" && styles.segmentTextActive,
+              ]}
+            >
               Map
             </AppText>
           </TouchableOpacity>
@@ -252,7 +356,9 @@ export function MyPlanScreen() {
           <Button
             variant="secondary"
             icon={CloudRain}
-            label={rainProofPlan ? 'Rain-proof this day' : 'Already rain-optimized'}
+            label={
+              rainProofPlan ? "Rain-proof this day" : "Already rain-optimized"
+            }
             onPress={onRainProof}
             disabled={!rainProofPlan}
             style={styles.rainProofBtn}
@@ -272,50 +378,142 @@ export function MyPlanScreen() {
           title="This day is open"
           message="Head to Discover and add a few places to fill it in."
           ctaLabel="Discover places"
-          onCtaPress={() => router.push('/discover')}
+          onCtaPress={() => router.push("/discover")}
         />
-      ) : view === 'map' ? (
-        <View style={styles.mapWrap}>
-          {Platform.OS === 'web' ? (
-            <View style={styles.webFallback}>
-              <MapPin size={26} color={colors.primary} />
-              <AppText variant="caption" center style={{ marginTop: spacing.sm }}>
-                Map view available on iOS / Android
-              </AppText>
+      ) : view === "map" ? (
+        <View style={styles.flex}>
+          {points.length > 0 && Platform.OS !== "web" && (
+            <View style={styles.modeRow}>
+              {MAP_MODES.map((m, i) => {
+                const active = i === mapMode;
+                return (
+                  <TouchableOpacity
+                    key={m.key}
+                    activeOpacity={0.85}
+                    onPress={() => setMapMode(i)}
+                    style={[styles.modeBtn, active && styles.modeBtnActive]}
+                  >
+                    <m.icon
+                      size={14}
+                      color={active ? colors.primary : colors.textSecondary}
+                      strokeWidth={2.2}
+                    />
+                    <AppText
+                      style={[
+                        styles.modeText,
+                        active && styles.modeTextActive,
+                      ]}
+                    >
+                      {m.label}
+                    </AppText>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
-          ) : points.length === 0 ? (
-            <View style={styles.webFallback}>
-              <MapPin size={26} color={colors.primary} />
-              <AppText variant="caption" center style={{ marginTop: spacing.sm }}>
-                No map data for this day
-              </AppText>
-            </View>
-          ) : (
-            <MapView
-              ref={mapRef}
-              style={StyleSheet.absoluteFill}
-              provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
-              customMapStyle={mutedMapStyle}
-              initialRegion={{
-                latitude: coords[0].latitude,
-                longitude: coords[0].longitude,
-                latitudeDelta: 0.03,
-                longitudeDelta: 0.03,
-              }}
-            >
-              {coords.length > 1 && (
-                <Polyline coordinates={routeCoords ?? coords} strokeColor={colors.primary} strokeWidth={4} />
-              )}
-              {points.map((p, i) => (
-                <Marker
-                  key={p.item.id}
-                  coordinate={p.coord}
-                  anchor={{ x: 0.5, y: 0.5 }}
+          )}
+
+          <View style={styles.mapWrap}>
+            {Platform.OS === "web" ? (
+              <View style={styles.webFallback}>
+                <MapPin size={26} color={colors.primary} />
+                <AppText
+                  variant="caption"
+                  center
+                  style={{ marginTop: spacing.sm }}
                 >
-                  <MapMarker number={i + 1} />
-                </Marker>
-              ))}
-            </MapView>
+                  Map view available on iOS / Android
+                </AppText>
+              </View>
+            ) : points.length === 0 ? (
+              <View style={styles.webFallback}>
+                <MapPin size={26} color={colors.primary} />
+                <AppText
+                  variant="caption"
+                  center
+                  style={{ marginTop: spacing.sm }}
+                >
+                  No map data for this day
+                </AppText>
+              </View>
+            ) : (
+              <>
+                <MapView
+                  ref={mapRef}
+                  style={StyleSheet.absoluteFill}
+                  provider={Platform.OS === "android" ? PROVIDER_GOOGLE : undefined}
+                  customMapStyle={mutedMapStyle}
+                  initialRegion={{
+                    latitude: coords[0].latitude,
+                    longitude: coords[0].longitude,
+                    latitudeDelta: 0.03,
+                    longitudeDelta: 0.03,
+                  }}
+                >
+                  {coords.length > 1 && (
+                    <Polyline
+                      coordinates={routeCoords ?? coords}
+                      strokeColor={colors.primary}
+                      strokeWidth={4}
+                    />
+                  )}
+                  {points.map((p, i) => (
+                    <Marker
+                      key={p.item.id}
+                      coordinate={p.coord}
+                      anchor={{ x: 0.5, y: 0.5 }}
+                      onPress={() => setSelectedIdx(i)}
+                    >
+                      <MapMarker number={i + 1} selected={i === selectedIdx} />
+                    </Marker>
+                  ))}
+                </MapView>
+                <View style={styles.transitPill} pointerEvents="none">
+                  <Navigation size={13} color={colors.primary} />
+                  <AppText style={styles.transitPillText}>
+                    {hops * activeMode.perHop} min moving · {activeMode.label}
+                  </AppText>
+                </View>
+              </>
+            )}
+          </View>
+
+          {points.length > 0 && Platform.OS !== "web" && selectedPoint && selectedMeta ? (
+            <Card style={styles.detailCard}>
+              <FeatureIcon icon={selectedMeta.icon} />
+              <View style={styles.detailText}>
+                <AppText variant="label">
+                  Stop {selectedIdx + 1} · {selectedMeta.label}
+                </AppText>
+                <AppText variant="bodyStrong" numberOfLines={1}>
+                  {selectedPoint.item.title}
+                </AppText>
+                <AppText
+                  style={styles.detailDesc}
+                  numberOfLines={2}
+                >
+                  {selectedPoint.item.description}
+                </AppText>
+                <AppText style={styles.detailLeg}>
+                  {selectedIdx === 0
+                    ? `First stop of the day · ${to12h(selectedPoint.item.time)}`
+                    : `${activeMode.perHop} min by ${activeMode.label.toLowerCase()} from stop ${selectedIdx} · ${to12h(selectedPoint.item.time)}`}
+                </AppText>
+              </View>
+            </Card>
+          ) : null}
+
+          {points.length > 0 && Platform.OS !== "web" && (
+            <View style={styles.legendRow}>
+              {CATEGORY_ORDER.map((cat) => {
+                const m = CATEGORY_META[cat];
+                return (
+                  <View key={cat} style={styles.legendChip}>
+                    <m.icon size={13} color={colors.primary} strokeWidth={2.2} />
+                    <AppText style={styles.legendText}>{m.label}</AppText>
+                  </View>
+                );
+              })}
+            </View>
           )}
         </View>
       ) : (
@@ -344,11 +542,13 @@ export function MyPlanScreen() {
           ListFooterComponent={
             <TouchableOpacity
               activeOpacity={0.85}
-              onPress={() => router.push('/discover')}
+              onPress={() => router.push("/discover")}
               style={styles.addStop}
             >
               <Sparkles size={16} color={colors.primary} strokeWidth={2.2} />
-              <AppText style={styles.addStopText}>Add a stop for this day</AppText>
+              <AppText style={styles.addStopText}>
+                Add a stop for this day
+              </AppText>
             </TouchableOpacity>
           }
         />
@@ -359,6 +559,67 @@ export function MyPlanScreen() {
           <AppText style={styles.toastText}>{toast}</AppText>
         </View>
       ) : null}
+
+      <BottomSheetModal
+        ref={swapSheetRef}
+        snapPoints={swapSnapPoints}
+        handleComponent={SheetHandle}
+        onDismiss={() => setSwapItemId(null)}
+        backgroundStyle={styles.sheetBg}
+      >
+        <BottomSheetView style={styles.sheetContent}>
+          <AppText variant="cardTitle" style={styles.sheetTitle}>
+            {swapTarget ? `Somewhere else at ${to12h(swapTarget.time)}?` : ""}
+          </AppText>
+          <AppText style={styles.sheetSub}>
+            Nearby, open then, and it keeps the rest of your day intact.
+          </AppText>
+
+          {swapCandidates.length === 0 ? (
+            <AppText style={styles.sheetEmpty}>
+              No nearby matches right now.
+            </AppText>
+          ) : (
+            <View style={styles.sheetList}>
+              {swapCandidates.map((c) => {
+                const cMeta = CATEGORY_META[c.category];
+                return (
+                  <TouchableOpacity
+                    key={c.id}
+                    activeOpacity={0.85}
+                    onPress={() => pickCandidate(c)}
+                    style={styles.sheetOption}
+                  >
+                    <FeatureIcon icon={cMeta.icon} />
+                    <View style={styles.sheetOptionText}>
+                      <AppText variant="bodyStrong" numberOfLines={1}>
+                        {c.title}
+                      </AppText>
+                      <AppText
+                        variant="caption"
+                        numberOfLines={2}
+                        style={styles.sheetOptionDesc}
+                      >
+                        {c.description}
+                      </AppText>
+                      <AppText style={styles.sheetOptionMeta}>
+                        {formatDuration(c.durationMin)} · {cMeta.label}
+                      </AppText>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
+
+          <Button
+            label="Keep what I have"
+            variant="secondary"
+            onPress={() => swapSheetRef.current?.dismiss()}
+            style={styles.sheetKeepBtn}
+          />
+        </BottomSheetView>
+      </BottomSheetModal>
     </SafeAreaView>
   );
 }
@@ -369,7 +630,8 @@ function PlanRow({
   isActive,
   last,
   isWet,
-  onSwap,
+  swapping,
+  onOpenSwap,
   onRemove,
 }: {
   item: ItineraryItem;
@@ -377,18 +639,11 @@ function PlanRow({
   isActive: boolean;
   last: boolean;
   isWet: boolean;
-  onSwap: () => Promise<void>;
+  swapping: boolean;
+  onOpenSwap: () => void;
   onRemove: () => void;
 }) {
   const meta = CATEGORY_META[item.category];
-  const [swapping, setSwapping] = useState(false);
-
-  const handleSwap = async () => {
-    if (swapping) return;
-    setSwapping(true);
-    await onSwap();
-    setSwapping(false);
-  };
 
   return (
     <View style={styles.rowWrap}>
@@ -402,7 +657,11 @@ function PlanRow({
         <View style={styles.cardTop}>
           <FeatureIcon icon={meta.icon} />
           <View style={styles.cardBody}>
-            <AppText variant="cardTitle" style={styles.cardTitle} numberOfLines={1}>
+            <AppText
+              variant="cardTitle"
+              style={styles.cardTitle}
+              numberOfLines={1}
+            >
               {item.title}
             </AppText>
             <AppText style={styles.desc} numberOfLines={2}>
@@ -422,7 +681,12 @@ function PlanRow({
         <View style={styles.badgeRow}>
           <Tag label={meta.label} icon={meta.icon} />
           {isWet ? (
-            <Tag label="Wet hour" icon={CloudRain} background={WET_BG} color={WET_FG} />
+            <Tag
+              label="Wet hour"
+              icon={CloudRain}
+              background={WET_BG}
+              color={WET_FG}
+            />
           ) : null}
         </View>
 
@@ -430,20 +694,28 @@ function PlanRow({
           <TouchableOpacity
             activeOpacity={0.8}
             style={styles.footerBtn}
-            onPress={handleSwap}
+            onPress={onOpenSwap}
             disabled={swapping}
           >
             {swapping ? (
               <ActivityIndicator size="small" color={colors.primary} />
             ) : (
-              <ArrowLeftRight size={14} color={colors.primary} strokeWidth={2.2} />
+              <ArrowLeftRight
+                size={14}
+                color={colors.primary}
+                strokeWidth={2.2}
+              />
             )}
             <AppText style={styles.swapText}>
-              {swapping ? 'Swapping…' : 'Try somewhere else'}
+              {swapping ? "Swapping…" : "Try somewhere else"}
             </AppText>
           </TouchableOpacity>
           <View style={styles.flex} />
-          <TouchableOpacity activeOpacity={0.8} style={styles.footerBtn} onPress={onRemove}>
+          <TouchableOpacity
+            activeOpacity={0.8}
+            style={styles.footerBtn}
+            onPress={onRemove}
+          >
             <Trash2 size={14} color={colors.textMuted} strokeWidth={2.2} />
             <AppText style={styles.removeText}>Remove</AppText>
           </TouchableOpacity>
@@ -455,18 +727,58 @@ function PlanRow({
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.screen },
+  headerActions: { flexDirection: "row", gap: spacing.sm, alignItems: "center" },
   flex: { flex: 1 },
+
+  // Swap sheet
+  sheetBg: { borderRadius: radius.xl },
+  sheetContent: {
+    paddingHorizontal: SCREEN_PADDING,
+    paddingBottom: spacing.xxl,
+    gap: spacing.sm,
+  },
+  sheetTitle: { fontSize: 18 },
+  sheetSub: {
+    fontSize: 12.5,
+    lineHeight: 18,
+    color: colors.textSecondary,
+    marginBottom: spacing.sm,
+  },
+  sheetEmpty: {
+    color: colors.textMuted,
+    paddingVertical: spacing.lg,
+    textAlign: "center",
+  },
+  sheetList: { gap: spacing.sm },
+  sheetOption: {
+    flexDirection: "row",
+    gap: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    backgroundColor: colors.white,
+  },
+  sheetOptionText: { flex: 1, gap: 2 },
+  sheetOptionDesc: { color: colors.textSecondary },
+  sheetOptionMeta: {
+    fontSize: 11.5,
+    fontWeight: "600",
+    color: colors.primary,
+    marginTop: 2,
+  },
+  sheetKeepBtn: { marginTop: spacing.md },
 
   // Day pills
   dayRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: spacing.sm,
     paddingHorizontal: SCREEN_PADDING,
     paddingBottom: spacing.base,
   },
   dayPill: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: "center",
     gap: 2,
     paddingVertical: spacing.md,
     borderRadius: radius.md,
@@ -474,15 +786,18 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     backgroundColor: colors.white,
   },
-  dayPillActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  dayText: { fontWeight: '600', fontSize: 13, color: colors.textSecondary },
+  dayPillActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  dayText: { fontWeight: "600", fontSize: 13, color: colors.textSecondary },
   dayTextActive: { color: colors.white },
   daySub: { fontSize: 10.5, lineHeight: 14, color: colors.textMuted },
-  daySubActive: { color: 'rgba(255,255,255,0.75)' },
+  daySubActive: { color: "rgba(255,255,255,0.75)" },
 
   // List / map toggle
   segmentRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     marginHorizontal: SCREEN_PADDING,
     marginBottom: spacing.base,
     backgroundColor: colors.mint,
@@ -491,12 +806,12 @@ const styles = StyleSheet.create({
   },
   segment: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: "center",
     paddingVertical: spacing.sm,
     borderRadius: radius.pill,
   },
   segmentActive: { backgroundColor: colors.white, ...shadows.card },
-  segmentText: { fontWeight: '500', fontSize: 14, color: colors.textSecondary },
+  segmentText: { fontWeight: "500", fontSize: 14, color: colors.textSecondary },
   segmentTextActive: { color: colors.primary },
 
   rainProofWrap: {
@@ -507,7 +822,7 @@ const styles = StyleSheet.create({
 
   // Toast
   toast: {
-    position: 'absolute',
+    position: "absolute",
     left: SCREEN_PADDING,
     right: SCREEN_PADDING,
     bottom: spacing.xl,
@@ -516,26 +831,105 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.base,
     paddingVertical: spacing.md,
   },
-  toastText: { fontSize: 13, fontWeight: '500', color: colors.white },
+  toastText: { fontSize: 13, fontWeight: "500", color: colors.white },
 
   mapWrap: {
     flex: 1,
     marginHorizontal: SCREEN_PADDING,
-    marginBottom: spacing.xxl,
+    marginBottom: spacing.md,
     borderRadius: radius.xl,
-    overflow: 'hidden',
+    overflow: "hidden",
     backgroundColor: colors.mint,
   },
-  webFallback: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.lg },
+  webFallback: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: spacing.lg,
+  },
 
-  listContent: { paddingHorizontal: SCREEN_PADDING, paddingBottom: spacing.xxl },
+  // Map mode toggle
+  modeRow: {
+    flexDirection: "row",
+    marginHorizontal: SCREEN_PADDING,
+    marginBottom: spacing.md,
+    backgroundColor: colors.mint,
+    borderRadius: radius.pill,
+    padding: 4,
+  },
+  modeBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.xs,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.pill,
+  },
+  modeBtnActive: { backgroundColor: colors.white, ...shadows.card },
+  modeText: { fontWeight: "600", fontSize: 12.5, color: colors.textSecondary },
+  modeTextActive: { color: colors.primary },
+
+  // Transit pill (over the map)
+  transitPill: {
+    position: "absolute",
+    top: spacing.md,
+    left: spacing.md,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    backgroundColor: colors.white,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 7,
+    ...shadows.card,
+  },
+  transitPillText: { fontWeight: "600", fontSize: 12, color: colors.textPrimary },
+
+  // Selected-stop detail card
+  detailCard: {
+    flexDirection: "row",
+    gap: spacing.md,
+    marginHorizontal: SCREEN_PADDING,
+    marginBottom: spacing.md,
+    borderRadius: radius.lg,
+  },
+  detailText: { flex: 1, gap: 3 },
+  detailDesc: { fontSize: 12.5, lineHeight: 18, color: colors.textSecondary },
+  detailLeg: { fontSize: 12, fontWeight: "500", color: colors.primary, marginTop: 2 },
+
+  // Legend
+  legendRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+    marginHorizontal: SCREEN_PADDING,
+    marginBottom: spacing.xxl,
+  },
+  legendChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+    backgroundColor: colors.white,
+  },
+  legendText: { fontSize: 11.5, fontWeight: "500", color: colors.textSecondary },
+
+  listContent: {
+    paddingHorizontal: SCREEN_PADDING,
+    paddingBottom: spacing.xxl,
+  },
   skeletonWrap: { paddingHorizontal: SCREEN_PADDING, gap: spacing.md },
 
   // Summary bar
   summary: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     gap: spacing.md,
     backgroundColor: colors.mint,
     borderRadius: radius.md,
@@ -543,14 +937,24 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     marginBottom: spacing.base,
   },
-  summaryItem: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  summaryText: { fontSize: 12.5, fontWeight: '600', color: colors.textPrimary },
-  hintRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  summaryItem: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
+  summaryText: { fontSize: 12.5, fontWeight: "600", color: colors.textPrimary },
+  hintRow: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
 
   // Stop rows
-  rowWrap: { flexDirection: 'row', gap: spacing.md, paddingBottom: spacing.md },
-  timeCol: { width: 52, alignItems: 'center', gap: spacing.xs, paddingTop: spacing.base },
-  time: { fontSize: 12, lineHeight: 15, fontWeight: '700', color: colors.primary },
+  rowWrap: { flexDirection: "row", gap: spacing.md, paddingBottom: spacing.md },
+  timeCol: {
+    width: 52,
+    alignItems: "center",
+    gap: spacing.xs,
+    paddingTop: spacing.base,
+  },
+  time: {
+    fontSize: 12,
+    lineHeight: 15,
+    fontWeight: "700",
+    color: colors.primary,
+  },
   dur: { fontSize: 10.5, lineHeight: 13, color: colors.textMuted },
   rail: {
     flex: 1,
@@ -561,36 +965,36 @@ const styles = StyleSheet.create({
   },
   card: { flex: 1, borderRadius: radius.lg, gap: spacing.sm },
   cardActive: { borderColor: colors.primary },
-  cardTop: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
+  cardTop: { flexDirection: "row", alignItems: "flex-start", gap: spacing.md },
   cardBody: { flex: 1, gap: spacing.xs },
-  cardTitle: { fontWeight: '700', fontSize: 15, lineHeight: 20 },
+  cardTitle: { fontWeight: "700", fontSize: 15, lineHeight: 20 },
   desc: { fontSize: 12.5, lineHeight: 18, color: colors.textSecondary },
   grip: { paddingLeft: spacing.xs, paddingTop: 2 },
-  badgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
+  badgeRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
   cardFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     borderTopWidth: 1,
     borderTopColor: colors.divider,
     paddingTop: spacing.sm,
   },
-  footerBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  swapText: { fontWeight: '600', fontSize: 12, color: colors.primary },
-  removeText: { fontWeight: '600', fontSize: 12, color: colors.textMuted },
+  footerBtn: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
+  swapText: { fontWeight: "600", fontSize: 12, color: colors.primary },
+  removeText: { fontWeight: "600", fontSize: 12, color: colors.textMuted },
 
   // Add-stop
   addStop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: spacing.sm,
     borderWidth: 1.5,
-    borderStyle: 'dashed',
+    borderStyle: "dashed",
     borderColor: colors.mintDeep,
     borderRadius: radius.lg,
     backgroundColor: colors.white,
     paddingVertical: spacing.base,
     marginTop: spacing.xs,
   },
-  addStopText: { fontWeight: '600', fontSize: 13.5, color: colors.primary },
+  addStopText: { fontWeight: "600", fontSize: 13.5, color: colors.primary },
 });

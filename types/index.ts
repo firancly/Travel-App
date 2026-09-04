@@ -50,6 +50,14 @@ export interface ItineraryDay {
   items: ItineraryItem[];
 }
 
+/** A saved trip — the app supports multiple, one active at a time. */
+export interface Trip extends Preferences {
+  id: string;
+  days: ItineraryDay[];
+  source: 'mock' | 'ai';
+  updatedAt: number; // Date.now() of the last save
+}
+
 export interface AudioStop {
   name: string;
   latitude: number;

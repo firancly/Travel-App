@@ -46,15 +46,24 @@ interface PlanState {
   source: PlanSource;
   generating: boolean;
   error: string | null;
+  /** Snapshot of `days` before the last destructive edit (single-level undo). */
+  _prev: ItineraryDay[] | null;
+  canUndo: boolean;
 
   addPlaceToPlan: (place: Place) => number; // returns the day number it landed in
-  smartSwap: (dayNumber: number, itemId: string) => Promise<void>;
+  /** Fetch up to 3 replacement candidates for a stop (AI-first, mock-pool fallback).
+   *  Read-only — does not mutate the plan. */
+  getSwapCandidates: (dayNumber: number, itemId: string) => Promise<ItineraryItem[]>;
+  /** Apply a chosen candidate in place of `itemId`, keeping its id + time slot. */
+  applySwap: (dayNumber: number, itemId: string, replacement: ItineraryItem) => void;
   reorderDayItems: (dayNumber: number, items: ItineraryItem[]) => void;
   removeItem: (dayNumber: number, itemId: string) => void;
   isPlaceInPlan: (placeId: string) => boolean;
   /** Generate a fresh plan via the AI proxy. Returns true on success; keeps the
    *  current plan as a fallback on failure. */
   generatePlan: (prefs: GeneratePrefs) => Promise<boolean>;
+  /** Revert the last destructive plan edit (swap, reorder, rain-proof, remove, add, regenerate). */
+  undo: () => void;
   resetPlan: () => void;
 }
 
@@ -65,9 +74,12 @@ export const usePlanStore = create<PlanState>()(
       source: 'mock',
       generating: false,
       error: null,
+      _prev: null,
+      canUndo: false,
 
       addPlaceToPlan: (place) => {
         const { days } = get();
+        set({ _prev: days, canUndo: true });
         // Drop it on the day with the fewest stops to keep things balanced.
         let targetIdx = 0;
         days.forEach((d, idx) => {
@@ -95,68 +107,81 @@ export const usePlanStore = create<PlanState>()(
         return target.day;
       },
 
-      smartSwap: async (dayNumber, itemId) => {
+      getSwapCandidates: async (dayNumber, itemId) => {
         const { days } = get();
         const day = days.find((d) => d.day === dayNumber);
         const item = day?.items.find((i) => i.id === itemId);
-        if (!day || !item) return;
+        if (!day || !item) return [];
 
         const usedTitles = days.flatMap((d) => d.items.map((i) => i.title));
-
-        const applyReplacement = (replacement: ItineraryItem) => {
-          set({
-            days: get().days.map((d) =>
-              d.day === dayNumber
-                ? { ...d, items: d.items.map((i) => (i.id === itemId ? replacement : i)) }
-                : d,
-            ),
-          });
-        };
+        const seen = new Set(usedTitles);
+        const results: ItineraryItem[] = [];
 
         if (itineraryApiConfigured()) {
           try {
             const destination = usePrefsStore.getState().destination;
             const anchor = swapAnchor(day.items, itemId);
-            const swapped = await swapStop(
-              destination,
-              item.category,
-              usedTitles,
-              item.time,
-              anchor?.latitude,
-              anchor?.longitude,
-            );
-            applyReplacement({
-              ...swapped,
-              id: item.id, // keep the same id + slot so the row can animate in place
-              time: item.time,
-            });
-            return;
+            const exclude = [...usedTitles];
+            for (let i = 0; i < 3; i++) {
+              const swapped = await swapStop(
+                destination,
+                item.category,
+                exclude,
+                item.time,
+                anchor?.latitude,
+                anchor?.longitude,
+              );
+              if (seen.has(swapped.title)) continue;
+              seen.add(swapped.title);
+              exclude.push(swapped.title);
+              results.push({ ...swapped, id: genId('cand'), time: item.time });
+            }
           } catch {
-            // fall through to the local mock pool below
+            // partial or zero AI results — fill the rest from the mock pool below
           }
         }
 
-        const usedSet = new Set(usedTitles);
-        const sameCategory = swapPool.filter((s) => s.category === item.category);
-        const fresh = sameCategory.filter((s) => !usedSet.has(s.title));
-        const pool = fresh.length ? fresh : sameCategory;
-        if (pool.length === 0) return;
+        if (results.length < 3) {
+          const sameCategory = swapPool.filter((s) => s.category === item.category);
+          const rest = swapPool.filter((s) => s.category !== item.category);
+          for (const p of [...sameCategory, ...rest]) {
+            if (results.length >= 3) break;
+            if (seen.has(p.title)) continue;
+            seen.add(p.title);
+            results.push({ ...p, id: genId('cand'), time: item.time });
+          }
+        }
 
-        const pick = pool[Math.floor(Math.random() * pool.length)];
-        applyReplacement({
-          ...pick,
-          id: item.id,
-          time: item.time,
+        return results;
+      },
+
+      applySwap: (dayNumber, itemId, replacement) => {
+        set({ _prev: get().days, canUndo: true });
+        set({
+          days: get().days.map((d) =>
+            d.day === dayNumber
+              ? {
+                  ...d,
+                  items: d.items.map((i) =>
+                    i.id === itemId ? { ...replacement, id: itemId, time: i.time } : i,
+                  ),
+                }
+              : d,
+          ),
         });
       },
 
       reorderDayItems: (dayNumber, items) =>
         set((s) => ({
+          _prev: s.days,
+          canUndo: true,
           days: s.days.map((d) => (d.day === dayNumber ? { ...d, items } : d)),
         })),
 
       removeItem: (dayNumber, itemId) =>
         set((s) => ({
+          _prev: s.days,
+          canUndo: true,
           days: s.days.map((d) =>
             d.day === dayNumber
               ? { ...d, items: d.items.filter((i) => i.id !== itemId) }
@@ -171,7 +196,7 @@ export const usePlanStore = create<PlanState>()(
         set({ generating: true, error: null });
         try {
           const days = await generateItinerary(prefs);
-          set({ days, source: 'ai', generating: false });
+          set({ _prev: get().days, canUndo: true, days, source: 'ai', generating: false });
           return true;
         } catch (e: any) {
           // Keep the existing plan as a fallback; surface a soft error.
@@ -180,7 +205,13 @@ export const usePlanStore = create<PlanState>()(
         }
       },
 
-      resetPlan: () => set({ days: seedDays(), source: 'mock', error: null }),
+      undo: () => {
+        const prev = get()._prev;
+        if (!prev) return;
+        set({ days: prev, _prev: null, canUndo: false });
+      },
+
+      resetPlan: () => set({ days: seedDays(), source: 'mock', error: null, _prev: null, canUndo: false }),
     }),
     {
       name: 'ntm-plan',
