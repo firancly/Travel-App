@@ -6,3 +6,13 @@ compatibility_date = "2025-06-01"
 [vars]
 GROQ_MODEL = "llama-3.3-70b-versatile"
 ALLOW_ORIGIN = "*"
+
+# Accounts + trips storage. Create once with:
+#   npx wrangler d1 create tournet
+# then paste the returned database_id below, and apply schema.sql:
+#   npx wrangler d1 execute tournet --file schema.sql --local   (for `wrangler dev`)
+#   npx wrangler d1 execute tournet --file schema.sql --remote  (for the deployed Worker)
+[[d1_databases]]
+binding = "DB"
+database_name = "tournet"
+database_id = "3a707299-93a2-4b2f-8780-c73ef1873359"

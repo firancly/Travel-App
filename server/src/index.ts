@@ -16,6 +16,7 @@ export interface Env {
   GROQ_API_KEY: string;
   GROQ_MODEL?: string; // default llama-3.3-70b-versatile
   ALLOW_ORIGIN?: string; // default *
+  DB: D1Database; // accounts + trips — see schema.sql
 }
 
 type Budget = "budget" | "mid" | "luxury";
@@ -254,8 +255,8 @@ async function callGroqSwap(env: Env, req: SwapReq): Promise<SwapItem> {
 function cors(env: Env): Record<string, string> {
   return {
     "Access-Control-Allow-Origin": env.ALLOW_ORIGIN || "*",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
   };
 }
 
@@ -266,73 +267,403 @@ function json(body: unknown, status: number, env: Env): Response {
   });
 }
 
+async function handleGenerate(req: Request, env: Env): Promise<Response> {
+  if (!env.GROQ_API_KEY) return json({ error: "server_misconfigured" }, 500, env);
+
+  let prefs: Prefs;
+  try {
+    prefs = (await req.json()) as Prefs;
+  } catch {
+    return json({ error: "bad_json" }, 400, env);
+  }
+
+  const durationDays = Math.max(
+    1,
+    Math.min(MAX_DAYS, Number(prefs?.durationDays) || 0),
+  );
+  if (!prefs?.destination || !durationDays) {
+    return json({ error: "destination and durationDays required" }, 400, env);
+  }
+
+  try {
+    const days = await callGroq(env, { ...prefs, durationDays });
+    return json({ days }, 200, env);
+  } catch (e: any) {
+    const aborted = e?.name === "AbortError";
+    return json(
+      {
+        error: aborted ? "timeout" : "generation_failed",
+        detail: String(e?.message ?? e),
+      },
+      502,
+      env,
+    );
+  }
+}
+
+async function handleSwap(req: Request, env: Env): Promise<Response> {
+  if (!env.GROQ_API_KEY) return json({ error: "server_misconfigured" }, 500, env);
+
+  let body: SwapReq;
+  try {
+    body = (await req.json()) as SwapReq;
+  } catch {
+    return json({ error: "bad_json" }, 400, env);
+  }
+  if (!body?.destination || !CATEGORIES.includes(body.category)) {
+    return json({ error: "destination and category required" }, 400, env);
+  }
+
+  try {
+    const item = await callGroqSwap(env, body);
+    return json({ item }, 200, env);
+  } catch (e: any) {
+    const aborted = e?.name === "AbortError";
+    return json(
+      {
+        error: aborted ? "timeout" : "swap_failed",
+        detail: String(e?.message ?? e),
+      },
+      502,
+      env,
+    );
+  }
+}
+
+// ---- Accounts (D1) ---------------------------------------------------------
+// Web Crypto only — Workers have no Node crypto / native bcrypt bindings.
+
+const PBKDF2_ITERATIONS = 100_000;
+const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+
+function toHex(buf: ArrayBuffer | Uint8Array): string {
+  const bytes = buf instanceof Uint8Array ? buf : new Uint8Array(buf);
+  return Array.from(bytes).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+function fromHex(hex: string): Uint8Array {
+  const out = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < out.length; i++) out[i] = parseInt(hex.substr(i * 2, 2), 16);
+  return out;
+}
+function randomHex(bytes: number): string {
+  const arr = new Uint8Array(bytes);
+  crypto.getRandomValues(arr);
+  return toHex(arr);
+}
+
+async function deriveBits(password: string, salt: Uint8Array): Promise<ArrayBuffer> {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(password),
+    "PBKDF2",
+    false,
+    ["deriveBits"],
+  );
+  return crypto.subtle.deriveBits(
+    { name: "PBKDF2", salt: salt as BufferSource, iterations: PBKDF2_ITERATIONS, hash: "SHA-256" },
+    key,
+    256,
+  );
+}
+
+async function hashPassword(password: string): Promise<string> {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const bits = await deriveBits(password, salt);
+  return `${toHex(salt)}:${toHex(bits)}`;
+}
+
+async function verifyPassword(password: string, stored: string): Promise<boolean> {
+  const [saltHex, hashHex] = stored.split(":");
+  if (!saltHex || !hashHex) return false;
+  const bits = await deriveBits(password, fromHex(saltHex));
+  return toHex(bits) === hashHex;
+}
+
+function newId(prefix: string): string {
+  return `${prefix}_${randomHex(12)}`;
+}
+
+function isEmail(s: unknown): s is string {
+  return typeof s === "string" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
+}
+
+interface DbUserRow {
+  id: string;
+  name: string;
+  email: string;
+  password_hash: string;
+}
+interface SessionUser {
+  id: string;
+  name: string;
+  email: string;
+}
+
+async function createSession(env: Env, userId: string): Promise<string> {
+  const token = randomHex(32);
+  const now = Date.now();
+  await env.DB.prepare(
+    "INSERT INTO sessions (token, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)",
+  )
+    .bind(token, userId, now, now + SESSION_TTL_MS)
+    .run();
+  return token;
+}
+
+/** Resolves the bearer token on `req` to its session's user, or null. */
+async function authenticate(req: Request, env: Env): Promise<SessionUser | null> {
+  const auth = req.headers.get("Authorization") || "";
+  const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
+  if (!token) return null;
+  const row = await env.DB.prepare(
+    `SELECT u.id as id, u.name as name, u.email as email FROM sessions s
+     JOIN users u ON u.id = s.user_id
+     WHERE s.token = ? AND s.expires_at > ?`,
+  )
+    .bind(token, Date.now())
+    .first<SessionUser>();
+  return row ?? null;
+}
+
+async function handleSignup(req: Request, env: Env): Promise<Response> {
+  let body: any;
+  try {
+    body = await req.json();
+  } catch {
+    return json({ error: "bad_json" }, 400, env);
+  }
+  const name = typeof body?.name === "string" ? body.name.trim() : "";
+  const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
+  const password = typeof body?.password === "string" ? body.password : "";
+  if (!name) return json({ error: "name required" }, 400, env);
+  if (!isEmail(email)) return json({ error: "valid email required" }, 400, env);
+  if (password.length < 8) return json({ error: "password must be at least 8 characters" }, 400, env);
+
+  const existing = await env.DB.prepare("SELECT id FROM users WHERE email = ?").bind(email).first();
+  if (existing) return json({ error: "email_taken" }, 409, env);
+
+  const id = newId("user");
+  const passwordHash = await hashPassword(password);
+  await env.DB.prepare(
+    "INSERT INTO users (id, name, email, password_hash, settings, created_at) VALUES (?, ?, ?, ?, '{}', ?)",
+  )
+    .bind(id, name, email, passwordHash, Date.now())
+    .run();
+
+  const token = await createSession(env, id);
+  return json({ token, user: { id, name, email } }, 200, env);
+}
+
+async function handleLogin(req: Request, env: Env): Promise<Response> {
+  let body: any;
+  try {
+    body = await req.json();
+  } catch {
+    return json({ error: "bad_json" }, 400, env);
+  }
+  const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
+  const password = typeof body?.password === "string" ? body.password : "";
+  if (!isEmail(email) || !password) return json({ error: "email and password required" }, 400, env);
+
+  const row = await env.DB.prepare(
+    "SELECT id, name, email, password_hash FROM users WHERE email = ?",
+  )
+    .bind(email)
+    .first<DbUserRow>();
+  if (!row || !(await verifyPassword(password, row.password_hash))) {
+    return json({ error: "invalid_credentials" }, 401, env);
+  }
+
+  const token = await createSession(env, row.id);
+  return json({ token, user: { id: row.id, name: row.name, email: row.email } }, 200, env);
+}
+
+async function handleMe(req: Request, env: Env): Promise<Response> {
+  const user = await authenticate(req, env);
+  if (!user) return json({ error: "unauthorized" }, 401, env);
+  return json({ user }, 200, env);
+}
+
+async function handleLogout(req: Request, env: Env): Promise<Response> {
+  const auth = req.headers.get("Authorization") || "";
+  const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
+  if (token) await env.DB.prepare("DELETE FROM sessions WHERE token = ?").bind(token).run();
+  return json({ ok: true }, 200, env);
+}
+
+// ---- Trips CRUD (D1) --------------------------------------------------------
+
+interface DbTripRow {
+  id: string;
+  user_id: string;
+  destination: string;
+  start_date: string | null;
+  end_date: string | null;
+  budget: string | null;
+  interests: string;
+  duration_days: number;
+  days: string;
+  source: string;
+  created_at: number;
+  updated_at: number;
+}
+
+function tripFromRow(row: DbTripRow) {
+  return {
+    id: row.id,
+    destination: row.destination,
+    startDate: row.start_date,
+    endDate: row.end_date,
+    budget: row.budget,
+    interests: JSON.parse(row.interests),
+    durationDays: row.duration_days,
+    days: JSON.parse(row.days),
+    source: row.source,
+    updatedAt: row.updated_at,
+  };
+}
+
+/** Normalizes + defaults an inbound trip payload (create or update). */
+function tripPayload(body: any) {
+  return {
+    destination: typeof body?.destination === "string" ? body.destination : "",
+    startDate: typeof body?.startDate === "string" ? body.startDate : null,
+    endDate: typeof body?.endDate === "string" ? body.endDate : null,
+    budget: typeof body?.budget === "string" ? body.budget : null,
+    interests: Array.isArray(body?.interests) ? body.interests : [],
+    durationDays: Number(body?.durationDays) || 1,
+    days: Array.isArray(body?.days) ? body.days : [],
+    source: body?.source === "ai" ? "ai" : "mock",
+  };
+}
+
+async function handleListTrips(req: Request, env: Env): Promise<Response> {
+  const user = await authenticate(req, env);
+  if (!user) return json({ error: "unauthorized" }, 401, env);
+  const { results } = await env.DB.prepare(
+    "SELECT * FROM trips WHERE user_id = ? ORDER BY updated_at DESC",
+  )
+    .bind(user.id)
+    .all<DbTripRow>();
+  return json({ trips: (results ?? []).map(tripFromRow) }, 200, env);
+}
+
+async function handleCreateTrip(req: Request, env: Env): Promise<Response> {
+  const user = await authenticate(req, env);
+  if (!user) return json({ error: "unauthorized" }, 401, env);
+  let body: any;
+  try {
+    body = await req.json();
+  } catch {
+    return json({ error: "bad_json" }, 400, env);
+  }
+  const t = tripPayload(body);
+  if (!t.destination) return json({ error: "destination required" }, 400, env);
+
+  const id = newId("trip");
+  const now = Date.now();
+  await env.DB.prepare(
+    `INSERT INTO trips (id, user_id, destination, start_date, end_date, budget, interests, duration_days, days, source, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  )
+    .bind(
+      id,
+      user.id,
+      t.destination,
+      t.startDate,
+      t.endDate,
+      t.budget,
+      JSON.stringify(t.interests),
+      t.durationDays,
+      JSON.stringify(t.days),
+      t.source,
+      now,
+      now,
+    )
+    .run();
+
+  return json({ trip: { id, ...t, updatedAt: now } }, 200, env);
+}
+
+async function handleUpdateTrip(req: Request, env: Env, tripId: string): Promise<Response> {
+  const user = await authenticate(req, env);
+  if (!user) return json({ error: "unauthorized" }, 401, env);
+  const existing = await env.DB.prepare("SELECT user_id FROM trips WHERE id = ?")
+    .bind(tripId)
+    .first<{ user_id: string }>();
+  if (!existing) return json({ error: "not_found" }, 404, env);
+  if (existing.user_id !== user.id) return json({ error: "forbidden" }, 403, env);
+
+  let body: any;
+  try {
+    body = await req.json();
+  } catch {
+    return json({ error: "bad_json" }, 400, env);
+  }
+  const t = tripPayload(body);
+  const now = Date.now();
+  await env.DB.prepare(
+    `UPDATE trips SET destination=?, start_date=?, end_date=?, budget=?, interests=?, duration_days=?, days=?, source=?, updated_at=? WHERE id=?`,
+  )
+    .bind(
+      t.destination,
+      t.startDate,
+      t.endDate,
+      t.budget,
+      JSON.stringify(t.interests),
+      t.durationDays,
+      JSON.stringify(t.days),
+      t.source,
+      now,
+      tripId,
+    )
+    .run();
+
+  return json({ trip: { id: tripId, ...t, updatedAt: now } }, 200, env);
+}
+
+async function handleDeleteTrip(req: Request, env: Env, tripId: string): Promise<Response> {
+  const user = await authenticate(req, env);
+  if (!user) return json({ error: "unauthorized" }, 401, env);
+  const existing = await env.DB.prepare("SELECT user_id FROM trips WHERE id = ?")
+    .bind(tripId)
+    .first<{ user_id: string }>();
+  if (!existing) return json({ error: "not_found" }, 404, env);
+  if (existing.user_id !== user.id) return json({ error: "forbidden" }, 403, env);
+
+  await env.DB.prepare("DELETE FROM trips WHERE id = ?").bind(tripId).run();
+  return json({ ok: true }, 200, env);
+}
+
+// ---- HTTP dispatch ----------------------------------------------------------
+
 export default {
   async fetch(req: Request, env: Env): Promise<Response> {
     if (req.method === "OPTIONS")
       return new Response(null, { status: 204, headers: cors(env) });
 
     const url = new URL(req.url);
-    if (req.method !== "POST" || (url.pathname !== "/generate-itinerary" && url.pathname !== "/swap-item")) {
+    const path = url.pathname;
+    const method = req.method;
+
+    try {
+      if (path === "/generate-itinerary" && method === "POST") return handleGenerate(req, env);
+      if (path === "/swap-item" && method === "POST") return handleSwap(req, env);
+
+      if (path === "/auth/signup" && method === "POST") return handleSignup(req, env);
+      if (path === "/auth/login" && method === "POST") return handleLogin(req, env);
+      if (path === "/auth/me" && method === "GET") return handleMe(req, env);
+      if (path === "/auth/logout" && method === "POST") return handleLogout(req, env);
+
+      if (path === "/trips" && method === "GET") return handleListTrips(req, env);
+      if (path === "/trips" && method === "POST") return handleCreateTrip(req, env);
+      const tripMatch = path.match(/^\/trips\/([^/]+)$/);
+      if (tripMatch && method === "PUT") return handleUpdateTrip(req, env, tripMatch[1]);
+      if (tripMatch && method === "DELETE") return handleDeleteTrip(req, env, tripMatch[1]);
+
       return json({ error: "not_found" }, 404, env);
-    }
-    if (!env.GROQ_API_KEY)
-      return json({ error: "server_misconfigured" }, 500, env);
-
-    if (url.pathname === "/swap-item") {
-      let body: SwapReq;
-      try {
-        body = (await req.json()) as SwapReq;
-      } catch {
-        return json({ error: "bad_json" }, 400, env);
-      }
-      if (!body?.destination || !CATEGORIES.includes(body.category)) {
-        return json({ error: "destination and category required" }, 400, env);
-      }
-
-      try {
-        const item = await callGroqSwap(env, body);
-        return json({ item }, 200, env);
-      } catch (e: any) {
-        const aborted = e?.name === "AbortError";
-        return json(
-          {
-            error: aborted ? "timeout" : "swap_failed",
-            detail: String(e?.message ?? e),
-          },
-          502,
-          env,
-        );
-      }
-    }
-
-    let prefs: Prefs;
-    try {
-      prefs = (await req.json()) as Prefs;
-    } catch {
-      return json({ error: "bad_json" }, 400, env);
-    }
-
-    const durationDays = Math.max(
-      1,
-      Math.min(MAX_DAYS, Number(prefs?.durationDays) || 0),
-    );
-    if (!prefs?.destination || !durationDays) {
-      return json({ error: "destination and durationDays required" }, 400, env);
-    }
-
-    try {
-      const days = await callGroq(env, { ...prefs, durationDays });
-      return json({ days }, 200, env);
     } catch (e: any) {
-      const aborted = e?.name === "AbortError";
-      return json(
-        {
-          error: aborted ? "timeout" : "generation_failed",
-          detail: String(e?.message ?? e),
-        },
-        502,
-        env,
-      );
+      return json({ error: "internal_error", detail: String(e?.message ?? e) }, 500, env);
     }
   },
 };

@@ -8,6 +8,7 @@ import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { AppText } from '@/components';
 import { colors, fonts, spacing, radius, shadows } from '@/theme';
 import { useTripsStore } from '@/store/useTripsStore';
+import { useRequireAccount } from '@/hooks/useRequireAccount';
 
 const ICONS: Record<string, LucideIcon> = {
   home: Home,
@@ -53,6 +54,7 @@ function TabButton({
 export function TabBar({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   const startNewTrip = useTripsStore((s) => s.startNewTrip);
+  const requireAccount = useRequireAccount();
 
   const mid = Math.ceil(state.routes.length / 2);
   const left = state.routes.slice(0, mid);
@@ -83,7 +85,7 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
       <View style={styles.fabSlot}>
         <TouchableOpacity
           activeOpacity={0.85}
-          onPress={startNewTrip}
+          onPress={() => requireAccount(startNewTrip)}
           style={styles.fab}
         >
           <Plus size={26} color={colors.white} strokeWidth={2.4} />

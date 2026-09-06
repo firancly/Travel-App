@@ -19,6 +19,8 @@ import {
   Compass,
   Plus,
   Check,
+  LogOut,
+  UserPlus,
 } from "lucide-react-native";
 import type { LucideIcon } from "lucide-react-native";
 import {
@@ -33,6 +35,8 @@ import { colors, spacing, radius, fonts, shadows, hairline } from "@/theme";
 import { usePrefsStore } from "@/store/usePrefsStore";
 import { usePlanStore } from "@/store/usePlanStore";
 import { useTripsStore } from "@/store/useTripsStore";
+import { useAuthStore } from "@/store/useAuthStore";
+import { useRequireAccount } from "@/hooks/useRequireAccount";
 import { audioTours } from "@/mock";
 import { formatDateRange } from "@/utils/date";
 import { cityName } from "@/utils/trip";
@@ -66,6 +70,10 @@ export function ProfileScreen() {
   const startNewTrip = useTripsStore((s) => s.startNewTrip);
   const deleteTrip = useTripsStore((s) => s.deleteTrip);
   const resetTrips = useTripsStore((s) => s.resetAll);
+  const requireAccount = useRequireAccount();
+
+  const authUser = useAuthStore((s) => s.user);
+  const logout = useAuthStore((s) => s.logout);
 
   // Keep the active trip's saved snapshot fresh whenever this screen is
   // viewed, so its row in the list reflects any swaps/reorders since the
@@ -110,6 +118,13 @@ export function ProfileScreen() {
     );
   };
 
+  const onLogout = () => {
+    Alert.alert("Log out?", "Your trips stay saved to your account.", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Log out", style: "destructive", onPress: () => logout() },
+    ]);
+  };
+
   const soon = () =>
     Alert.alert("Coming soon", "This is a demo screen for the MVP.");
 
@@ -144,7 +159,7 @@ export function ProfileScreen() {
         <SectionHeader
           title="Trips"
           actionLabel="+ New trip"
-          onActionPress={startNewTrip}
+          onActionPress={() => requireAccount(startNewTrip)}
         />
         {sortedTrips.length === 0 ? (
           <Card style={styles.tripRow} onPress={() => router.push("/plan")}>
@@ -210,6 +225,33 @@ export function ProfileScreen() {
             last
           />
         </Card>
+      </View>
+
+      {/* Account */}
+      <View style={styles.section}>
+        <SectionHeader title="Account" />
+        {authUser ? (
+          <Card noPadding>
+            <MenuRow icon={UserPlus} label={authUser.name} value={authUser.email} onPress={() => {}} />
+            <MenuRow icon={LogOut} label="Log out" onPress={onLogout} last />
+          </Card>
+        ) : (
+          <Card style={styles.accountPrompt}>
+            <View style={styles.tripText}>
+              <AppText variant="bodyStrong">You're not signed in</AppText>
+              <AppText variant="caption" style={styles.tripSub}>
+                Create an account to edit this trip or plan more than one.
+              </AppText>
+            </View>
+            <Button
+              label="Create account"
+              variant="secondary"
+              icon={UserPlus}
+              onPress={() => router.push("/account")}
+              fullWidth={false}
+            />
+          </Card>
+        )}
       </View>
 
       {/* Menu */}
@@ -381,6 +423,7 @@ const styles = StyleSheet.create({
 
   // Current trip
   tripList: { gap: spacing.sm },
+  accountPrompt: { gap: spacing.md, alignItems: "flex-start" },
   tripRow: { flexDirection: "row", alignItems: "center", gap: spacing.md },
   tripRowActive: { borderWidth: 1.5, borderColor: colors.primary },
   tripText: { flex: 1, gap: 2 },

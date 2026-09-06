@@ -63,6 +63,7 @@ import {
   hourOf,
 } from "@/utils/rainProof";
 import { fetchRoute, type Coords } from "@/services/routing";
+import { useRequireAccount } from "@/hooks/useRequireAccount";
 import type { ItineraryItem } from "@/types";
 
 type PlanView = "list" | "map";
@@ -90,15 +91,18 @@ export function MyPlanScreen() {
   const canUndo = usePlanStore((s) => s.canUndo);
   const undo = usePlanStore((s) => s.undo);
   const prefs = usePrefsStore();
+  const requireAccount = useRequireAccount();
 
   const regenerate = () => {
     if (generating) return;
-    generatePlan({
-      destination: prefs.destination,
-      durationDays: prefs.durationDays,
-      budget: prefs.budget,
-      interests: prefs.interests,
-      startDate: prefs.startDate,
+    requireAccount(() => {
+      generatePlan({
+        destination: prefs.destination,
+        durationDays: prefs.durationDays,
+        budget: prefs.budget,
+        interests: prefs.interests,
+        startDate: prefs.startDate,
+      });
     });
   };
 
@@ -146,8 +150,10 @@ export function MyPlanScreen() {
       setToast("Already rain-optimized.");
       return;
     }
-    reorderDayItems(dayNumber, rainProofPlan);
-    setToast("Moved outdoor stops to drier hours.");
+    requireAccount(() => {
+      reorderDayItems(dayNumber, rainProofPlan);
+      setToast("Moved outdoor stops to drier hours.");
+    });
   };
 
   const onUndo = () => {
@@ -164,14 +170,16 @@ export function MyPlanScreen() {
   const [swapCandidates, setSwapCandidates] = useState<ItineraryItem[]>([]);
   const swapTarget = items.find((i) => i.id === swapItemId);
 
-  const openSwap = async (itemId: string) => {
-    if (swapLoadingId) return;
-    setSwapLoadingId(itemId);
-    const candidates = await getSwapCandidates(dayNumber, itemId);
-    setSwapLoadingId(null);
-    setSwapCandidates(candidates);
-    setSwapItemId(itemId);
-    swapSheetRef.current?.present();
+  const openSwap = (itemId: string) => {
+    requireAccount(async () => {
+      if (swapLoadingId) return;
+      setSwapLoadingId(itemId);
+      const candidates = await getSwapCandidates(dayNumber, itemId);
+      setSwapLoadingId(null);
+      setSwapCandidates(candidates);
+      setSwapItemId(itemId);
+      swapSheetRef.current?.present();
+    });
   };
 
   const pickCandidate = (candidate: ItineraryItem) => {
@@ -269,7 +277,7 @@ export function MyPlanScreen() {
           isWet={!!wetHours && wetHours.has(hourOf(item.time))}
           swapping={swapLoadingId === item.id}
           onOpenSwap={() => openSwap(item.id)}
-          onRemove={() => removeItem(dayNumber, item.id)}
+          onRemove={() => requireAccount(() => removeItem(dayNumber, item.id))}
         />
       </ScaleDecorator>
     );
@@ -521,7 +529,7 @@ export function MyPlanScreen() {
           data={items}
           keyExtractor={(i) => i.id}
           renderItem={renderItem}
-          onDragEnd={({ data }) => reorderDayItems(dayNumber, data)}
+          onDragEnd={({ data }) => requireAccount(() => reorderDayItems(dayNumber, data))}
           containerStyle={styles.flex}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
