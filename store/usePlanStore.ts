@@ -1,21 +1,30 @@
-import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { ItineraryDay, ItineraryItem, Place } from '@/types';
-import { itinerary as mockItinerary, swapPool } from '@/mock';
-import { addMinutes } from '@/utils/time';
-import { generateItinerary, swapStop, itineraryApiConfigured, type GeneratePrefs } from '@/services/itinerary';
-import { usePrefsStore } from '@/store/usePrefsStore';
-import { getItemCoords, type Coords } from '@/utils/coords';
+import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import type { ItineraryDay, ItineraryItem, Place } from "@/types";
+import { itinerary as mockItinerary, swapPool } from "@/mock";
+import { addMinutes } from "@/utils/time";
+import {
+  generateItinerary,
+  swapStop,
+  itineraryApiConfigured,
+  type GeneratePrefs,
+} from "@/services/itinerary";
+import { usePrefsStore } from "@/store/usePrefsStore";
+import { getItemCoords, type Coords } from "@/utils/coords";
 
 /** Anchor for a proximity-aware swap: midpoint of the item's neighbors (whichever
  *  have coords), else the item's own coord, else undefined (city-wide fallback). */
-function swapAnchor(items: ItineraryItem[], itemId: string): Coords | undefined {
+function swapAnchor(
+  items: ItineraryItem[],
+  itemId: string,
+): Coords | undefined {
   const idx = items.findIndex((i) => i.id === itemId);
   if (idx === -1) return undefined;
 
   const prevCoord = idx > 0 ? getItemCoords(items[idx - 1]) : null;
-  const nextCoord = idx < items.length - 1 ? getItemCoords(items[idx + 1]) : null;
+  const nextCoord =
+    idx < items.length - 1 ? getItemCoords(items[idx + 1]) : null;
 
   if (prevCoord && nextCoord) {
     return {
@@ -28,10 +37,11 @@ function swapAnchor(items: ItineraryItem[], itemId: string): Coords | undefined 
   return getItemCoords(items[idx]) ?? undefined;
 }
 
-export type PlanSource = 'mock' | 'ai';
+export type PlanSource = "mock" | "ai";
 
 let idCounter = 0;
-const genId = (prefix: string) => `${prefix}-${Date.now().toString(36)}-${idCounter++}`;
+const genId = (prefix: string) =>
+  `${prefix}-${Date.now().toString(36)}-${idCounter++}`;
 
 /** Fresh deep copy of the seed itinerary so persisted edits never mutate mock data. */
 const seedDays = (): ItineraryDay[] =>
@@ -53,9 +63,16 @@ interface PlanState {
   addPlaceToPlan: (place: Place) => number; // returns the day number it landed in
   /** Fetch up to 3 replacement candidates for a stop (AI-first, mock-pool fallback).
    *  Read-only — does not mutate the plan. */
-  getSwapCandidates: (dayNumber: number, itemId: string) => Promise<ItineraryItem[]>;
+  getSwapCandidates: (
+    dayNumber: number,
+    itemId: string,
+  ) => Promise<ItineraryItem[]>;
   /** Apply a chosen candidate in place of `itemId`, keeping its id + time slot. */
-  applySwap: (dayNumber: number, itemId: string, replacement: ItineraryItem) => void;
+  applySwap: (
+    dayNumber: number,
+    itemId: string,
+    replacement: ItineraryItem,
+  ) => void;
   reorderDayItems: (dayNumber: number, items: ItineraryItem[]) => void;
   removeItem: (dayNumber: number, itemId: string) => void;
   isPlaceInPlan: (placeId: string) => boolean;
@@ -71,7 +88,7 @@ export const usePlanStore = create<PlanState>()(
   persist(
     (set, get) => ({
       days: seedDays(),
-      source: 'mock',
+      source: "mock",
       generating: false,
       error: null,
       _prev: null,
@@ -87,10 +104,10 @@ export const usePlanStore = create<PlanState>()(
         });
         const target = days[targetIdx];
         const last = target.items[target.items.length - 1];
-        const time = last ? addMinutes(last.time, last.durationMin) : '10:00';
+        const time = last ? addMinutes(last.time, last.durationMin) : "10:00";
 
         const newItem: ItineraryItem = {
-          id: genId('add'),
+          id: genId("add"),
           time,
           title: place.name,
           description: place.description,
@@ -101,7 +118,9 @@ export const usePlanStore = create<PlanState>()(
 
         set({
           days: days.map((d, idx) =>
-            idx === targetIdx ? { ...d, items: sortByTime([...d.items, newItem]) } : d,
+            idx === targetIdx
+              ? { ...d, items: sortByTime([...d.items, newItem]) }
+              : d,
           ),
         });
         return target.day;
@@ -134,7 +153,7 @@ export const usePlanStore = create<PlanState>()(
               if (seen.has(swapped.title)) continue;
               seen.add(swapped.title);
               exclude.push(swapped.title);
-              results.push({ ...swapped, id: genId('cand'), time: item.time });
+              results.push({ ...swapped, id: genId("cand"), time: item.time });
             }
           } catch {
             // partial or zero AI results — fill the rest from the mock pool below
@@ -142,13 +161,15 @@ export const usePlanStore = create<PlanState>()(
         }
 
         if (results.length < 3) {
-          const sameCategory = swapPool.filter((s) => s.category === item.category);
+          const sameCategory = swapPool.filter(
+            (s) => s.category === item.category,
+          );
           const rest = swapPool.filter((s) => s.category !== item.category);
           for (const p of [...sameCategory, ...rest]) {
             if (results.length >= 3) break;
             if (seen.has(p.title)) continue;
             seen.add(p.title);
-            results.push({ ...p, id: genId('cand'), time: item.time });
+            results.push({ ...p, id: genId("cand"), time: item.time });
           }
         }
 
@@ -163,7 +184,9 @@ export const usePlanStore = create<PlanState>()(
               ? {
                   ...d,
                   items: d.items.map((i) =>
-                    i.id === itemId ? { ...replacement, id: itemId, time: i.time } : i,
+                    i.id === itemId
+                      ? { ...replacement, id: itemId, time: i.time }
+                      : i,
                   ),
                 }
               : d,
@@ -196,11 +219,20 @@ export const usePlanStore = create<PlanState>()(
         set({ generating: true, error: null });
         try {
           const days = await generateItinerary(prefs);
-          set({ _prev: get().days, canUndo: true, days, source: 'ai', generating: false });
+          set({
+            _prev: get().days,
+            canUndo: true,
+            days,
+            source: "ai",
+            generating: false,
+          });
           return true;
         } catch (e: any) {
           // Keep the existing plan as a fallback; surface a soft error.
-          set({ generating: false, error: String(e?.message ?? 'generation failed') });
+          set({
+            generating: false,
+            error: String(e?.message ?? "generation failed"),
+          });
           return false;
         }
       },
@@ -211,10 +243,17 @@ export const usePlanStore = create<PlanState>()(
         set({ days: prev, _prev: null, canUndo: false });
       },
 
-      resetPlan: () => set({ days: seedDays(), source: 'mock', error: null, _prev: null, canUndo: false }),
+      resetPlan: () =>
+        set({
+          days: seedDays(),
+          source: "mock",
+          error: null,
+          _prev: null,
+          canUndo: false,
+        }),
     }),
     {
-      name: 'ntm-plan',
+      name: "ntm-plan",
       storage: createJSONStorage(() => AsyncStorage),
       // Persist only the plan itself, not transient generation flags.
       partialize: (s) => ({ days: s.days, source: s.source }),
